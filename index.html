@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>专注 - Focus App</title>
+    <link rel="icon" href="icon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Indie+Flower&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@200;400;700&family=Montserrat:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&family=Noto+Serif+SC:wght@300;400;700&family=Outfit:wght@300;400;600&family=Patrick+Hand&family=Righteous&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="background-container">
+        <img src="bg.png" alt="background" class="bg-img">
+        <div class="overlay"></div>
+    </div>
+
+    <main class="glass-container">
+        <header>
+            <div class="header-main-row">
+                <div class="stats">
+                    <span class="label">今日专注: </span>
+                    <span id="daily-time" class="value">00:00:00</span>
+                </div>
+                <div id="main-cat-selector" class="segmented-control">
+                    <button class="segment active" data-value="study">学业</button>
+                    <button class="segment" data-value="pa">价格行为学</button>
+                    <button class="segment" data-value="reading">看书</button>
+                </div>
+
+            </div>
+            <div id="sub-category-container" class="sub-cat-row" style="display: none;">
+                <div class="sub-cat-box">
+                    <div id="sub-category-dropdown" class="custom-dropdown">
+                        <button id="sub-category-trigger" class="dropdown-trigger">
+                            <span id="sub-category-value">默认</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9l6 6 6-6"></path>
+                            </svg>
+                        </button>
+                        <div id="sub-category-menu" class="dropdown-menu">
+                            <!-- Items dynamically injected -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="timer-display">
+            <div id="mode-icon-trigger" class="mode-icon-trigger" title="切换模式">
+                <svg class="icon-countdown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 22h14"></path>
+                    <path d="M5 2h14"></path>
+                    <path d="M17 22c0-3-2.66-5-5-5s-5 2-5 5"></path>
+                    <path d="M7 2c0 3 2.66 5 5 5s5-2 5-5"></path>
+                    <path d="M12 10v4"></path>
+                </svg>
+                <svg class="icon-stopwatch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <circle cx="12" cy="13" r="8"></circle>
+                    <path d="M12 9v4l2 2"></path>
+                    <path d="M12 2v3"></path>
+                    <path d="M17.65 6.35 15.85 8.15"></path>
+                </svg>
+            </div>
+            <div id="timer-box" class="timer-text">25:00</div>
+            <div id="countdown-picker" class="picker-container">
+                <input type="number" id="minutes-input" min="1" max="180" value="25">
+                <span>分钟</span>
+                <div id="finish-summary" class="finish-summary hidden"></div>
+            </div>
+            <div id="goals-display" class="goals-container">
+                <!-- Goals will be injected here -->
+            </div>
+        </section>
+
+        <section class="action-section">
+            <button id="main-focus-btn" class="focus-btn pulse">
+                <span class="btn-text">开始专注</span>
+                <div class="btn-ripple"></div>
+            </button>
+            <button id="reset-btn" class="reset-btn" title="完成专注并记录">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span class="confirm-text">确定结束?</span>
+            </button>
+        </section>
+
+        <section id="today-goals-view" class="goals-view-section" style="display: none;">
+            <div class="goals-view-header">
+                <h3>今日目标进度</h3>
+                <div class="header-line"></div>
+            </div>
+            <div id="goals-cards-container" class="goals-cards-grid">
+                <!-- Goal cards dynamically injected here -->
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-btns">
+                <button id="open-stats" class="glass-btn small">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    <span>数据统计</span>
+                </button>
+                <button id="open-settings" class="glass-btn small">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    <span>设置</span>
+                </button>
+                <button id="toggle-mini" class="glass-btn small" title="开启悬浮窗">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                    <span>悬浮窗</span>
+                </button>
+            </div>
+            <p id="focus-quote" class="quote"></p>
+        </footer>
+    </main>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay" class="overlay-full">
+        <div class="glass-container small-modal">
+            <header>
+                <h2>系统设置</h2>
+                <button id="close-settings" class="icon-btn">×</button>
+            </header>
+            <div class="settings-content">
+                <div class="setting-item">
+                    <label>全局快捷键 (开始/暂停):</label>
+                    <div class="hotkey-input-wrapper">
+                        <input type="text" id="hotkey-input" class="glass-input" readonly placeholder="点击设置快捷键">
+                        <button id="save-hotkey" class="glass-btn tiny">应用</button>
+                    </div>
+                    <small class="tip">提示：点击输入框后按下按键组合 (如 Ctrl+Alt+F)</small>
+                </div>
+                <div class="setting-item">
+                    <label>全球时区设置:</label>
+                    <div class="custom-dropdown" id="timezone-dropdown">
+                        <div class="dropdown-trigger glass-select" id="timezone-trigger">
+                            <span id="timezone-value">加载中...</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu scrollable" id="timezone-menu">
+                            <div class="dropdown-item" data-value="system">系统默认 (自动跟随本地时间)</div>
+                            <div class="dropdown-item" data-value="UTC-12">UTC-12</div>
+                            <div class="dropdown-item" data-value="UTC-11">UTC-11</div>
+                            <div class="dropdown-item" data-value="UTC-10">UTC-10</div>
+                            <div class="dropdown-item" data-value="UTC-9">UTC-9</div>
+                            <div class="dropdown-item" data-value="UTC-8">UTC-8</div>
+                            <div class="dropdown-item" data-value="UTC-7">UTC-7</div>
+                            <div class="dropdown-item" data-value="UTC-6">UTC-6</div>
+                            <div class="dropdown-item" data-value="UTC-5">UTC-5</div>
+                            <div class="dropdown-item" data-value="UTC-4">UTC-4</div>
+                            <div class="dropdown-item" data-value="UTC-3">UTC-3</div>
+                            <div class="dropdown-item" data-value="UTC-2">UTC-2</div>
+                            <div class="dropdown-item" data-value="UTC-1">UTC-1</div>
+                            <div class="dropdown-item" data-value="UTC+0">UTC±0 (伦敦)</div>
+                            <div class="dropdown-item" data-value="UTC+1">UTC+1 (巴黎/柏林)</div>
+                            <div class="dropdown-item" data-value="UTC+2">UTC+2</div>
+                            <div class="dropdown-item" data-value="UTC+3">UTC+3</div>
+                            <div class="dropdown-item" data-value="UTC+4">UTC+4</div>
+                            <div class="dropdown-item" data-value="UTC+5">UTC+5</div>
+                            <div class="dropdown-item" data-value="UTC+6">UTC+6</div>
+                            <div class="dropdown-item" data-value="UTC+7">UTC+7 (曼谷/河内)</div>
+                            <div class="dropdown-item" data-value="UTC+8">UTC+8 (北京/新加坡)</div>
+                            <div class="dropdown-item" data-value="UTC+9">UTC+9 (东京/首尔)</div>
+                            <div class="dropdown-item" data-value="UTC+10">UTC+10</div>
+                            <div class="dropdown-item" data-value="UTC+11">UTC+11</div>
+                            <div class="dropdown-item" data-value="UTC+12">UTC+12</div>
+                            <div class="dropdown-item" data-value="UTC+13">UTC+13</div>
+                            <div class="dropdown-item" data-value="UTC+14">UTC+14</div>
+                        </div>
+                    </div>
+                    <small class="tip">更改时区后，统计数据将根据新时区重新计算。</small>
+                </div>
+                <div class="setting-item">
+                    <label>分类管理:</label>
+                    <div class="cat-manager-box">
+                        <div class="cat-list-column">
+                            <span class="column-label">大类</span>
+                            <div id="settings-main-cat-list" class="cat-scroll-list"></div>
+                            <button id="add-main-cat" class="glass-btn tiny">+ 新增</button>
+                        </div>
+                        <div class="cat-list-column">
+                            <span class="column-label">子分类</span>
+                            <div id="settings-sub-cat-list" class="cat-scroll-list"></div>
+                            <button id="add-sub-cat" class="glass-btn tiny">+ 新增</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>个性化背景:</label>
+                    <div class="bg-selection-grid">
+                        <!-- Dynamically rendered by script.js -->
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>全局字体风格:</label>
+                    <div class="custom-dropdown" id="app-font-dropdown">
+                        <div class="dropdown-trigger glass-select" id="app-font-trigger">
+                            <span id="app-font-value">加载中...</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu scrollable" id="app-font-menu">
+                            <div class="dropdown-item" data-value="'Outfit'">Outfit (默认 / 电影感)</div>
+                            <div class="dropdown-item" data-value="'Inter'">Inter (极简通用)</div>
+                            <div class="dropdown-item" data-value="'Montserrat'">Montserrat (现代优雅)</div>
+                            <div class="dropdown-item" data-value="'JetBrains Mono'">JetBrains Mono (极客 / 代码)</div>
+                            <div class="dropdown-item" data-value="'Fira Code'">Fira Code (技术感)</div>
+                            <div class="dropdown-item" data-value="'Space Mono'">Space Mono (复古科幻)</div>
+                            <div class="dropdown-item" data-value="'Righteous'">Righteous (艺术几何)</div>
+                            <div class="dropdown-item" data-value="'Indie Flower'">Indie Flower (随意笔记)</div>
+                            <div class="dropdown-item" data-value="'Patrick Hand'">Patrick Hand (工整笔记)</div>
+                            <div class="dropdown-item" data-value="'Noto Sans SC'">思源黑体 (现代清爽)</div>
+                            <div class="dropdown-item" data-value="'Noto Serif SC'">思源宋体 (优雅古典)</div>
+                            <div class="dropdown-item" data-value="system-ui">系统内置</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>悬浮窗动效 (Focus Mini):</label>
+                    <div class="custom-dropdown" id="mini-effect-dropdown">
+                        <div class="dropdown-trigger glass-select" id="mini-effect-trigger">
+                            <span id="mini-effect-value">加载中...</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu scrollable" id="mini-effect-menu">
+                            <div class="dropdown-item" data-value="webgl-warp">波纹幻境 (WebGL Warp)</div>
+                            <div class="dropdown-item" data-value="webgl-silk">流光绸缎 (WebGL Silk)</div>
+                            <div class="dropdown-item" data-value="webgl-liquid">流体动态 (WebGL Liquid)</div>
+                            <div class="dropdown-item" data-value="webgl-cosmic">星空璀璨 (WebGL Cosmic)</div>
+                            <div class="dropdown-item" data-value="webgl-grid">几何空间 (WebGL Grid)</div>
+                            <div class="dropdown-item" data-value="abstract">抽象流动 (Abstract Flow)</div>
+                            <div class="dropdown-item" data-value="breathing">呼吸微光 (Breathing Glow)</div>
+                            <div class="dropdown-item" data-value="neon-pulse">霓虹脉冲 (Neon Pulse)</div>
+                            <div class="dropdown-item" data-value="aurora">极光流光 (Aurora)</div>
+                            <div class="dropdown-item" data-value="glitch">赛博故障 (Cyber Glitch)</div>
+                            <div class="dropdown-item" data-value="sunset">日落渐变 (Sunset)</div>
+                            <div class="dropdown-item" data-value="hologram">全息闪光 (Hologram)</div>
+                            <div class="dropdown-item" data-value="pure-black">纯黑 (Pure Black)</div>
+                            <div class="dropdown-item" data-value="solid-white">纯白 (Pure White)</div>
+                            <div class="dropdown-item" data-value="solid-gray">深灰 (Dark Gray)</div>
+                            <div class="dropdown-item" data-value="solid-red">深红 (Deep Red)</div>
+                            <div class="dropdown-item" data-value="solid-green">深绿 (Deep Green)</div>
+                            <div class="dropdown-item" data-value="solid-blue">深蓝 (Deep Blue)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>主界面毛玻璃模糊度:</label>
+                    <div class="blur-slider-container">
+                        <input type="range" id="glass-blur-slider" min="0" max="40" value="20" class="glass-slider">
+                        <span id="blur-value-display" class="slider-value">20px</span>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label>数据管理:</label>
+                    <button id="clear-db-btn" class="glass-btn danger-outline">清空所有专注记录</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Modal/Section -->
+    <div id="stats-overlay" class="overlay-full">
+        <div class="glass-container large">
+            <header>
+                <h2>专注统计回溯</h2>
+                <button id="close-stats" class="icon-btn">×</button>
+            </header>
+            <div class="chart-controls">
+                <div class="filter-group">
+                    <div class="custom-dropdown" id="stat-filter-main-dropdown">
+                        <div class="dropdown-trigger glass-select" id="stat-filter-main-trigger">
+                            <span id="stat-filter-main-value">全部大类</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu scrollable" id="stat-filter-main-menu">
+                            <div class="dropdown-item" data-value="">全部大类</div>
+                            <!-- Dynamic items will be added here -->
+                        </div>
+                    </div>
+                    <div class="custom-dropdown" id="stat-filter-sub-dropdown" style="display: none;">
+                        <div class="dropdown-trigger glass-select" id="stat-filter-sub-trigger">
+                            <span id="stat-filter-sub-value">全部小类</span>
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="dropdown-menu scrollable" id="stat-filter-sub-menu">
+                            <div class="dropdown-item" data-value="">全部小类</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="stat-time-range" class="segmented-control mini">
+                    <button class="segment active" data-range="today">当天</button>
+                    <button class="segment" data-range="week">本周</button>
+                    <button class="segment" data-range="month">本月</button>
+                    <button class="segment" data-range="all">全部</button>
+                </div>
+            </div>
+
+            <div class="stats-summary-wrap">
+                <div class="stats-summary-bar">
+                    <div class="summary-item">
+                        <span class="label">时段内总计时:</span>
+                        <span id="stat-total-time" class="value">00:00:00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="label">加权平均专注度:</span>
+                        <span id="stat-focus-score" class="value">--</span>
+                        <span id="stat-focus-details" class="subvalue"></span>
+                    </div>
+                </div>
+                <div id="stats-drill-breadcrumb" class="stats-drill-breadcrumb" style="display: none;"></div>
+            </div>
+            <div id="calendar-heatmap" class="heatmap-container">
+                <!-- Heatmap will be injected here -->
+            </div>
+
+            <div class="charts-wrapper">
+                <div class="chart-row">
+                    <div class="canvas-container line">
+                        <canvas id="focus-chart"></canvas>
+                    </div>
+                    <div class="canvas-container pie">
+                        <canvas id="focus-pie-chart"></canvas>
+                    </div>
+                </div>
+                <div class="canvas-container distribution">
+                    <canvas id="distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+
+
+</html>

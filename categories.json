@@ -1,0 +1,50 @@
+{
+    "2025冬季学期": {
+        "subs": [
+            "Investition",
+            "EEWF",
+            "EVS",
+            "INFO2",
+            "Organisation",
+            "PBE",
+            "默认"
+        ],
+        "hidden": false,
+        "goal": 0,
+        "subGoals": {
+            "Investition": 90,
+            "INFO2": 0,
+            "EVS": 30,
+            "EEWF": 45
+        },
+        "hiddenSubs": [
+            "默认"
+        ]
+    },
+    "价格行为": {
+        "subs": [
+            "默认"
+        ],
+        "hidden": false,
+        "goal": 60,
+        "hiddenSubs": []
+    },
+    "阅读": {
+        "subs": [
+            "卡拉马佐夫兄弟",
+            "默认"
+        ],
+        "hidden": false,
+        "goal": 30,
+        "hiddenSubs": [
+            "默认"
+        ]
+    },
+    "锻炼": {
+        "subs": [
+            "默认"
+        ],
+        "hidden": false,
+        "hiddenSubs": []
+    }
+}

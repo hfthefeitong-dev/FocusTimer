@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Focus Mini</title>
+    <link rel="icon" href="icon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Indie+Flower&family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@200;400;700&family=Montserrat:wght@300;400;600&family=Noto+Sans+SC:wght@300;400;700&family=Noto+Serif+SC:wght@300;400;700&family=Outfit:wght@300;400;600&family=Patrick+Hand&family=Righteous&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
+            --text: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.6);
+            --bg: rgba(20, 20, 20, 0.65);
+            --border: rgba(255, 255, 255, 0.12);
+            --chinese-font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Source Han Sans CN", sans-serif;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, var(--chinese-font);
+            background: none !important;
+            background-color: transparent !important;
+            color: var(--text);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .mini-card {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(-45deg, #141414, #1e1b4b, #2e1065, #141414);
+            background-size: 400% 400%;
+            /* backdrop-filter removed as it needs transparency behind it */
+            border: none;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 8px 18px 12px 18px;
+            box-sizing: border-box;
+            position: relative;
+            /* box-shadow: none; */
+            overflow: hidden;
+            -webkit-app-region: drag;
+            transition: all 0.5s ease;
+        }
+
+        /* --- Animation Styles --- */
+
+        /* 1. Abstract Flow (Existing) */
+        .mini-card.active.effect-abstract {
+            animation: abstract-flow 15s ease infinite;
+        }
+
+        @keyframes abstract-flow {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* 2. Breathing Glow */
+        .mini-card.active.effect-breathing {
+            animation: breathing-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes breathing-glow {
+
+            0%,
+            100% {
+                background-color: rgba(20, 20, 20, 0.65);
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            }
+
+            50% {
+                background-color: rgba(40, 40, 60, 0.8);
+                box-shadow: 0 0 40px var(--primary-glow);
+            }
+        }
+
+
+
+        /* 4. Neon Pulse */
+        .mini-card.active.effect-neon-pulse {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(255, 0, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            animation: neon-pulse-anim 2s infinite alternate;
+        }
+
+        @keyframes neon-pulse-anim {
+            0% {
+                box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 20px rgba(255, 0, 255, 0.2);
+                border-color: rgba(0, 255, 255, 0.3);
+            }
+
+            100% {
+                box-shadow: 0 0 25px rgba(0, 255, 255, 0.8), inset 0 0 40px rgba(255, 0, 255, 0.4);
+                border-color: rgba(0, 255, 255, 0.8);
+            }
+        }
+
+        /* 5. Aurora */
+        @keyframes aurora-bg {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .mini-card.effect-aurora {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #4338ca);
+            background-size: 400% 400%;
+        }
+
+        .mini-card.active.effect-aurora {
+            animation: aurora-bg 10s ease infinite;
+        }
+
+        /* 6. Cyber Glitch */
+        .mini-card.effect-glitch {
+            background: #000;
+            border: 1px solid #333;
+        }
+
+        .mini-card.active.effect-glitch {
+            animation: glitch-anim 3s infinite;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            2% {
+                transform: translate(-2px, 0);
+            }
+
+            4% {
+                transform: translate(2px, 0);
+            }
+
+            6% {
+                transform: translate(0, 0);
+            }
+
+            90% {
+                transform: translate(0, 0);
+            }
+
+            92% {
+                transform: translate(2px, -2px);
+            }
+
+            94% {
+                transform: translate(-2px, 2px);
+            }
+
+            96% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        /* 9. Sunset Phase */
+        .mini-card.effect-sunset {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background-size: 200% 200%;
+        }
+
+        .mini-card.active.effect-sunset {
+            animation: sunset-move 8s ease infinite;
+        }
+
+        @keyframes sunset-move {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* 10. Holographic Glint */
+        .mini-card.effect-hologram {
+            background: #1a1a1a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mini-card.effect-hologram::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg,
+                    transparent 0%,
+                    transparent 40%,
+                    rgba(255, 255, 255, 0.1) 45%,
+                    rgba(255, 255, 255, 0.2) 50%,
+                    rgba(255, 255, 255, 0.1) 55%,
+                    transparent 60%,
+                    transparent 100%);
+            transform: rotate(25deg);
+            pointer-events: none;
+        }
+
+        .mini-card.active.effect-hologram::before {
+            animation: hologram-glint 3s linear infinite;
+        }
+
+        @keyframes hologram-glint {
+            0% {
+                left: -150%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* 11. Pure Black */
+        .mini-card.effect-pure-black {
+            background: #000000;
+        }
+
+        /* 12. Solid Colors */
+        .mini-card.effect-solid-white {
+            background: #ffffff;
+            color: #1a1a1a;
+        }
+
+        .mini-card.effect-solid-white .timer {
+            background: linear-gradient(180deg, #1a1a1a 0%, #444 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mini-card.effect-solid-white .cat-info,
+        .mini-card.effect-solid-white .close-btn {
+            color: rgba(0, 0, 0, 0.6);
+        }
+
+        .mini-card.effect-solid-white .close-btn:hover {
+            color: #000;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .mini-card.effect-solid-gray {
+            background: #3f3f46;
+        }
+
+        .mini-card.effect-solid-red {
+            background: #7f1d1d;
+        }
+
+        .mini-card.effect-solid-green {
+            background: #14532d;
+        }
+
+        .mini-card.effect-solid-blue {
+            background: #1e3a8a;
+        }
+
+        .mini-card.active.effect-glitch {
+            animation: glitch-anim 3s infinite;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 5px #0f0;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            2% {
+                transform: translate(-2px, 0);
+            }
+
+            4% {
+                transform: translate(2px, 0);
+            }
+
+            6% {
+                transform: translate(0, 0);
+            }
+
+            90% {
+                transform: translate(0, 0);
+            }
+
+            92% {
+                transform: translate(2px, -2px);
+            }
+
+            94% {
+                transform: translate(-2px, 2px);
+            }
+
+            96% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+
+        .mini-card.active.effect-glitch .timer {
+            text-shadow: 2px 0 rgba(255, 0, 0, 0.5), -2px 0 rgba(0, 255, 0, 0.5);
+        }
+
+        .mini-card.active.paused,
+        .mini-card.active.paused::before,
+        .mini-card.active.paused::after,
+        .mini-card.active.paused * {
+            animation-play-state: paused !important;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .cat-info-container {
+            width: 155px;
+            overflow: hidden;
+            position: relative;
+            padding: 2px 6px 0 6px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            min-height: 24px;
+        }
+
+        .cat-info-container.is-scrolling {
+            mask-image: linear-gradient(to right, transparent 0, black 6px, black calc(100% - 6px), transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, transparent 0, black 6px, black calc(100% - 6px), transparent 100%);
+        }
+
+        .cat-info {
+            font-size: 0.82rem;
+            line-height: 1.2;
+            font-weight: 600;
+            color: var(--text-dim);
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        @keyframes marquee {
+            0% {
+                transform: translateX(0);
+            }
+
+            15% {
+                transform: translateX(0);
+            }
+
+            85% {
+                transform: translateX(var(--scroll-dist));
+            }
+
+            100% {
+                transform: translateX(var(--scroll-dist));
+            }
+        }
+
+        .cat-info.scrolling {
+            animation: marquee var(--scroll-duration) ease-in-out infinite alternate;
+        }
+
+        .status-dot-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 12px;
+            height: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.paused {
+            background: #fbbf24;
+            box-shadow: 0 0 10px #fbbf24;
+        }
+
+        .timer-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 0;
+            height: 42px;
+            /* Fixed height to prevent logo shift when font size changes */
+            position: relative;
+            z-index: 5;
+        }
+
+        .mode-icon-svg {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            position: relative;
+            margin-top: 2px;
+            /* Shifted down slightly */
+        }
+
+        .mode-icon-svg svg {
+            width: 100%;
+            height: 100%;
+            stroke-width: 2.5;
+            filter: drop-shadow(0 0 4px var(--primary-glow));
+            transition: all 0.4s ease;
+        }
+
+        .timer {
+            font-family: 'Inter', var(--chinese-font);
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+            /* Slightly increased for stability */
+            padding-top: 0;
+            background: linear-gradient(180deg, #fff 0%, #ddd 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            word-break: keep-all;
+            transition: all 0.3s ease;
+            /* Transition all for smoother size change */
+            display: flex;
+            align-items: center;
+            height: 100%;
+        }
+
+        /* Aligned with Main Window's finished-entry */
+        @keyframes finished-entry {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(20px);
+                filter: blur(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+                filter: blur(0px);
+            }
+        }
+
+        .timer.finished {
+            font-family: var(--chinese-font);
+            font-weight: 800;
+            font-size: 1.8rem;
+            /* Match base size to prevent jump */
+            line-height: 1.2;
+            color: #ffffff;
+            text-shadow: none;
+        }
+
+        .mini-card.active .timer.finished {
+            animation: finished-entry 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            animation-play-state: running !important;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s;
+            -webkit-app-region: no-drag;
+            line-height: 1;
+            opacity: 0;
+            z-index: 100;
+        }
+
+        .mini-card:hover .close-btn {
+            opacity: 1;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.85;
+                transform: scale(1.02);
+            }
+        }
+
+        @keyframes dot-pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.3);
+                opacity: 0.6;
+            }
+        }
+
+        .active .timer {
+            animation: pulse 3s infinite ease-in-out;
+        }
+
+        .active .status-dot:not(.paused) {
+            animation: dot-pulse 2s infinite ease-in-out;
+        }
+
+        .no-drag {
+            -webkit-app-region: no-drag;
+        }
+
+        #bg-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: none;
+            pointer-events: none;
+        }
+
+        .effect-webgl-liquid #bg-canvas,
+        .effect-webgl-cosmic #bg-canvas,
+        .effect-webgl-grid #bg-canvas,
+        .effect-webgl-silk #bg-canvas,
+        .effect-webgl-warp #bg-canvas {
+            display: block;
+        }
+
+        .effect-webgl-liquid,
+        .effect-webgl-cosmic,
+        .effect-webgl-grid,
+        .effect-webgl-silk,
+        .effect-webgl-warp {
+            background: #000 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="card" class="mini-card">
+        <div class="close-btn" onclick="closeMini()">×</div>
+        <div class="header">
+            <div class="cat-info-container">
+                <div id="cat-text" class="cat-info">准备专注...</div>
+            </div>
+            <div class="status-dot-container">
+                <div id="status-dot" class="status-dot paused"></div>
+            </div>
+        </div>
+        <div class="timer-row">
+            <div id="mode-icon-container" class="mode-icon-svg">
+                <svg class="icon-countdown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 22h14"></path>
+                    <path d="M5 2h14"></path>
+                    <path d="M17 22c0-3-2.66-5-5-5s-5 2-5 5"></path>
+                    <path d="M7 2c0 3 2.66 5 5 5s5-2 5-5"></path>
+                    <path d="M12 10v4"></path>
+                </svg>
+                <svg class="icon-stopwatch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <circle cx="12" cy="13" r="8"></circle>
+                    <path d="M12 9v4l2 2"></path>
+                    <path d="M12 2v3"></path>
+                    <path d="M17.65 6.35 15.85 8.15"></path>
+                </svg>
+            </div>
+            <div id="timer-text" class="timer">00:00</div>
+        </div>
+        <canvas id="bg-canvas"></canvas>
+    </div>
+
+    <script>
+        const timerText = document.getElementById('timer-text');
+        const catText = document.getElementById('cat-text');
+        const statusDot = document.getElementById('status-dot');
+        const card = document.getElementById('card');
+
+        function updateDisplay(data) {
+            // Data structure: { time: "00:00", mainCat: "...", subCat: "...", isPaused: bool, mode: "...", miniEffect: "...", appFont: "..." }
+            if (data.appFont) {
+                document.body.style.fontFamily = `${data.appFont}, var(--chinese-font)`;
+                timerText.style.fontFamily = `${data.appFont}, var(--chinese-font)`;
+            }
+            timerText.innerText = data.time || "00:00";
+
+            let displayCat = data.mainCat;
+            if (data.subCat && data.subCat !== '默认') {
+                displayCat += ' · ' + data.subCat;
+            }
+            catText.innerText = displayCat;
+
+            // Handle scrolling if text is too long
+            const container = catText.parentElement;
+            // clientWidth includes padding, we want the inner content area (155px - 12px padding)
+            const contentWidth = container.clientWidth - 12;
+            const isOverflowing = catText.scrollWidth > contentWidth;
+
+            if (isOverflowing) {
+                // scrollDist is the difference between viewable content area and text width
+                const scrollDist = contentWidth - catText.scrollWidth;
+                const duration = Math.abs(scrollDist) / 30;
+                catText.style.setProperty('--scroll-dist', `${scrollDist}px`);
+                catText.style.setProperty('--scroll-duration', `${Math.max(3, duration)}s`);
+                catText.classList.add('scrolling');
+                container.classList.add('is-scrolling');
+            } else {
+                catText.classList.remove('scrolling');
+                container.classList.remove('is-scrolling');
+                catText.style.removeProperty('--scroll-dist');
+                catText.style.removeProperty('--scroll-duration');
+            }
+
+            // Update Effects
+            const effect = data.miniEffect || 'abstract';
+            // Clear all effect classes
+            card.classList.remove(
+                'effect-abstract',
+                'effect-breathing',
+
+                'effect-neon-pulse',
+                'effect-aurora',
+                'effect-glitch',
+                'effect-sunset',
+                'effect-hologram',
+                'effect-pure-black',
+                'effect-solid-white',
+                'effect-solid-gray',
+                'effect-solid-red',
+                'effect-solid-green',
+                'effect-solid-blue',
+                'effect-webgl-liquid',
+                'effect-webgl-cosmic',
+                'effect-webgl-grid',
+                'effect-webgl-silk',
+                'effect-webgl-warp'
+            );
+            card.classList.add(`effect-${effect}`);
+
+            if (effect.startsWith('webgl-')) {
+                currentEffectType = effect;
+                startWebGL();
+            } else {
+                stopWebGL();
+            }
+
+            if (data.isPaused) {
+                statusDot.classList.add('paused');
+                card.classList.add('paused');
+            } else {
+                statusDot.classList.remove('paused');
+                card.classList.remove('paused');
+                card.classList.add('active');
+            }
+
+            if (data.isFinished) {
+                timerText.classList.add('finished');
+            } else {
+                timerText.classList.remove('finished');
+            }
+
+            const countdownIcon = document.querySelector('#mode-icon-container .icon-countdown');
+            const stopwatchIcon = document.querySelector('#mode-icon-container .icon-stopwatch');
+            if (data.mode === 'countdown') {
+                countdownIcon.style.display = 'block';
+                stopwatchIcon.style.display = 'none';
+            } else {
+                countdownIcon.style.display = 'none';
+                stopwatchIcon.style.display = 'block';
+            }
+        }
+
+        function closeMini() {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.toggle_mini_window();
+            }
+        }
+
+        // --- WebGL Background Implementation ---
+        const canvas = document.getElementById('bg-canvas');
+        const gl = canvas.getContext('webgl', { alpha: false, antialias: false });
+        gl.getExtension('OES_standard_derivatives');
+
+        let animationFrameId = null;
+        let isWebGLRunning = false;
+        let lastTimestamp = 0;
+        let accumulatedTime = 0;
+        let currentEffectType = 'webgl-liquid';
+
+        const vertexShaderSource = `
+            attribute vec2 position;
+            void main() {
+                gl_Position = vec4(position, 0.0, 1.0);
+            }
+        `;
+
+        const liquidShaderSource = `
+            precision highp float;
+            uniform float time;
+            uniform vec2 resolution;
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy / resolution.xy;
+                float t = time * 1.5;
+                vec3 color = vec3(0.02, 0.02, 0.05);
+                float wave1 = sin(uv.x * 6.0 + t * 0.8 + sin(uv.y * 3.0 + t)) * 0.5 + 0.5;
+                float wave2 = sin(uv.y * 5.0 - t * 1.1 + cos(uv.x * 4.0 - t)) * 0.5 + 0.5;
+                float wave3 = sin((uv.x + uv.y) * 4.0 + t * 1.5) * 0.5 + 0.5;
+                color += vec3(0.1, 0.4, 1.0) * wave1 * 0.6;
+                color += vec3(0.6, 0.1, 0.8) * wave2 * 0.5;
+                color += vec3(0.0, 0.8, 0.8) * wave3 * 0.4;
+                float pulse = pow(0.5 + 0.5 * sin(t * 0.4), 3.0);
+                color += vec3(0.3, 0.5, 1.0) * pulse * 0.2;
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        const cosmicShaderSource = `
+            precision highp float;
+            uniform float time;
+            uniform vec2 resolution;
+
+            float hash(vec2 p) {
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+            }
+
+            void main() {
+                vec2 uv = (gl_FragCoord.xy - 0.5 * resolution.xy) / min(resolution.y, resolution.x);
+                float t = time * 0.4;
+                vec3 color = vec3(0.0);
+                float n = 0.0;
+                vec2 st = uv * 3.0;
+                for(int i=0; i<3; i++) {
+                    n += sin(st.x + t) * sin(st.y + t * 0.5);
+                    st *= 1.5;
+                }
+                color += vec3(0.1, 0.05, 0.2) * (n * 0.5 + 0.5);
+
+                for(int i=0; i<40; i++) {
+                    float fi = float(i);
+                    vec2 pos = vec2(hash(vec2(fi, 1.0)), hash(vec2(fi, 2.0))) * 2.0 - 1.0;
+                    float size = 0.002 + 0.003 * hash(vec2(fi, 3.0));
+                    float twinkle = 0.5 + 0.5 * sin(t * 3.0 + fi);
+                    float dist = length(uv - pos);
+                    color += (vec3(0.8, 0.9, 1.0) * twinkle * size) / (dist + 0.001);
+                }
+
+                float nebula = length(uv);
+                color += vec3(0.4, 0.1, 0.6) * (1.0 - smoothstep(0.0, 1.2, nebula)) * 0.3;
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        const gridShaderSource = `
+            precision highp float;
+            uniform float time;
+            uniform vec2 resolution;
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy / resolution.xy;
+                uv -= 0.5;
+                uv.x *= resolution.x / resolution.y;
+                
+                float t = time * 0.6;
+                vec3 color = vec3(0.01, 0.02, 0.05);
+                
+                // Pulsing grid lines
+                vec2 grid = fract(uv * 10.0 + sin(t * 0.5) * 0.2);
+                float line = smoothstep(0.0, 0.03, grid.x) * smoothstep(1.0, 0.97, grid.x);
+                line *= smoothstep(0.0, 0.03, grid.y) * smoothstep(1.0, 0.97, grid.y);
+                
+                color += vec3(0.1, 0.4, 0.8) * (1.0 - line) * 0.4;
+
+                gl_FragColor = vec4(color, 1.0);
+            }
+        `;
+
+        const silkShaderSource = `
+            precision highp float;
+            uniform float time;
+            uniform vec2 resolution;
+
+            // Simple noise function
+            vec2 hash22(vec2 p) {
+                p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
+                return -1.0 + 2.0 * fract(sin(p) * 43758.5453123);
+            }
+
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                vec2 u = f * f * (3.0 - 2.0 * f);
+                return mix(mix(dot(hash22(i + vec2(0.0, 0.0)), f - vec2(0.0, 0.0)),
+                               dot(hash22(i + vec2(1.0, 0.0)), f - vec2(1.0, 0.0)), u.x),
+                           mix(dot(hash22(i + vec2(0.0, 1.0)), f - vec2(0.0, 1.0)),
+                               dot(hash22(i + vec2(1.0, 1.0)), f - vec2(1.0, 1.0)), u.x), u.y);
+            }
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy / resolution.xy;
+                float t = time * 0.4;
+                
+                // Layered noise for silk effect
+                vec2 p = uv * 3.0;
+                float n = 0.0;
+                float amp = 1.0;
+                for(int i = 0; i < 3; i++) {
+                    n += noise(p + t * 0.5) * amp;
+                    p *= 2.0;
+                    amp *= 0.5;
+                }
+                
+                // Create elegant color transitions
+                vec3 col1 = vec3(0.1, 0.2, 0.5); // Deep blue
+                vec3 col2 = vec3(0.5, 0.1, 0.4); // Deep purple
+                vec3 col3 = vec3(0.1, 0.5, 0.6); // Teal
+                
+                float mask = sin(uv.x * 2.0 + n * 3.0 + t) * 0.5 + 0.5;
+                vec3 color = mix(col1, col2, mask);
+                color = mix(color, col3, sin(uv.y * 3.0 - n * 2.0 + t * 1.2) * 0.5 + 0.5);
+                
+                // Add highlights
+                float highlight = pow(n * 0.5 + 0.5, 3.0);
+                color += highlight * 0.2;
+                
+                gl_FragColor = vec4(color * 0.6, 1.0);
+            }
+        `;
+
+        const warpShaderSource = `
+            precision highp float;
+            uniform float time;
+            uniform vec2 resolution;
+
+            // Simple noise function for textureless color
+            vec3 smoothFract(vec3 x){ x = fract(x); return min(x, x*(1.-x)*12.0); }
+
+            vec2 W(vec2 p){
+                p = (p + 3.)*4.;
+                float t = time/2.;
+                for (int i=0; i<3; i++){
+                    p += cos(p.yx*3. + vec2(t, 1.57))/3.;
+                    p += sin(p.yx + t + vec2(1.57, 0))/2.;
+                    p *= 1.3;
+                }
+                p += fract(sin(p+vec2(13, 7))*5e5)*.03 - .015;
+                return mod(p, 2.) - 1.;
+            }
+
+            float bumpFunc(vec2 p){ 
+                return length(W(p))*.7071;
+            }
+
+            void main() {
+                vec2 uv = (gl_FragCoord.xy - resolution.xy*.5)/resolution.y;
+                vec3 sp = vec3(uv, 0);
+                vec3 rd = normalize(vec3(uv, 1));
+                vec3 lp = vec3(cos(time)*.5, sin(time)*.2, -1.0);
+                vec3 sn = vec3(0, 0, -1.0);
+                
+                vec2 eps = vec2(4./resolution.y, 0);
+                float f = bumpFunc(sp.xy);
+                float fx = bumpFunc(sp.xy - eps.xy);
+                float fy = bumpFunc(sp.xy - eps.yx);
+                
+                const float bumpFactor = .05;
+                fx = (fx - f)/eps.x;
+                fy = (fy - f)/eps.x;
+                sn = normalize(sn + vec3(fx, fy, 0)*bumpFactor);   
+                
+                vec3 ld = lp - sp;
+                float lDist = max(length(ld), .0001);
+                ld /= lDist;
+                float atten = 1./(1. + lDist*lDist*.15);
+                atten *= f*.9 + .1;
+
+                float diff = max(dot(sn, ld), 0.);  
+                diff = pow(diff, 4.)*.66 + pow(diff, 8.)*.34; 
+                float spec = pow(max(dot( reflect(-ld, sn), -rd), 0.), 12.); 
+                
+                // textureless color variation
+                vec3 texCol = smoothFract( W(sp.xy).xyy )*.1 + .2;
+                
+                vec3 col = (texCol*(diff*vec3(1, .97, .92)*2. + .5) + vec3(1, .6, .2)*spec*2.)*atten;
+                float ref = max(dot(reflect(rd, sn), vec3(1)), 0.);
+                col += col*pow(ref, 4.)*vec3(.25, .5, 1)*3.;
+                
+                gl_FragColor = vec4(sqrt(clamp(col, 0., 1.)) * 0.75, 1.0);
+            }
+        `;
+
+
+
+        function createProgram(gl, vsSource, fsSource) {
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vsSource);
+            gl.compileShader(vs);
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fsSource);
+            gl.compileShader(fs);
+            const prog = gl.createProgram();
+            gl.attachShader(prog, vs);
+            gl.attachShader(prog, fs);
+            gl.linkProgram(prog);
+            return gl.getProgramParameter(prog, gl.LINK_STATUS) ? prog : null;
+        }
+
+        const programs = {
+            'webgl-liquid': createProgram(gl, vertexShaderSource, liquidShaderSource),
+            'webgl-cosmic': createProgram(gl, vertexShaderSource, cosmicShaderSource),
+            'webgl-grid': createProgram(gl, vertexShaderSource, gridShaderSource),
+            'webgl-silk': createProgram(gl, vertexShaderSource, silkShaderSource),
+            'webgl-warp': createProgram(gl, vertexShaderSource, warpShaderSource)
+        };
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+        function render(now) {
+            if (!isWebGLRunning) return;
+            if (!lastTimestamp) lastTimestamp = now;
+            const dt = (now - lastTimestamp) / 1000;
+            lastTimestamp = now;
+
+            const speed = card.classList.contains('paused') ? 0.2 : 1.0;
+            accumulatedTime += dt * speed;
+
+            if (canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight) {
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+
+            const prog = programs[currentEffectType];
+            if (prog) {
+                gl.useProgram(prog);
+                const pLoc = gl.getAttribLocation(prog, 'position');
+                const tLoc = gl.getUniformLocation(prog, 'time');
+                const rLoc = gl.getUniformLocation(prog, 'resolution');
+
+                gl.enableVertexAttribArray(pLoc);
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+                gl.uniform1f(tLoc, accumulatedTime);
+                gl.uniform2f(rLoc, canvas.width, canvas.height);
+                gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            }
+            animationFrameId = requestAnimationFrame(render);
+        }
+
+        function startWebGL() {
+            if (isWebGLRunning) return;
+            isWebGLRunning = true;
+            lastTimestamp = 0;
+            animationFrameId = requestAnimationFrame(render);
+        }
+
+        function stopWebGL() {
+            isWebGLRunning = false;
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+    </script>
+</body>
+
+</html>
