@@ -1,0 +1,6 @@
+# 本地配置文件
+categories.json
+settings.json
+
+# 本地数据库
+focus_data.db
