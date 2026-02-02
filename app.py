@@ -1155,7 +1155,7 @@ if __name__ == '__main__':
     
     api = Api()
     main_window = webview.create_window(
-        '专注 (Focus)',
+        '专注Focus',
         url=get_entrypoint(),
         width=1000,
         height=1050,
@@ -1166,7 +1166,7 @@ if __name__ == '__main__':
     )
     
     # Set main window icon
-    set_window_icon('专注 (Focus)', 'icon.ico')
+    set_window_icon('专注Focus', 'icon.ico')
     
     # Use a thread or a hook to setup hotkeys after window is ready
     webview.start(setup_hotkeys, main_window, debug=False)
