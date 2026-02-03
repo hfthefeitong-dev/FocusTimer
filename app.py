@@ -5,6 +5,7 @@ import sqlite3
 import json
 import threading
 import shutil
+import tempfile
 from datetime import datetime, date, timedelta
 import time
 import ctypes
@@ -174,6 +175,43 @@ def bring_window_to_front(window_title, keep_topmost_ms=200):
     except Exception:
         return False
 
+def _read_json_file(path, default):
+    try:
+        with open(path, 'r', encoding='utf-8-sig') as f:
+            raw = f.read()
+        if not raw.strip():
+            return default
+        return json.loads(raw)
+    except FileNotFoundError:
+        return default
+    except Exception as e:
+        print(f"Error loading {os.path.basename(path)}: {e}")
+        return default
+
+def _atomic_write_json(path, data):
+    directory = os.path.dirname(os.path.abspath(path)) or os.getcwd()
+    prefix = f"{os.path.basename(path)}."
+    tmp_path = None
+
+    try:
+        fd, tmp_path = tempfile.mkstemp(prefix=prefix, suffix=".tmp", dir=directory, text=True)
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except Exception:
+                pass
+        os.replace(tmp_path, path)
+        tmp_path = None
+        return True
+    finally:
+        if tmp_path:
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -250,20 +288,12 @@ class Api:
             return str(e)
 
     def get_settings(self):
-        if os.path.exists(SETTINGS_FILE):
-            try:
-                with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-                    settings = json.load(f)
-                    return settings if isinstance(settings, dict) else {}
-            except Exception as e:
-                print(f"Error loading settings: {e}")
-        return {}
+        settings = _read_json_file(SETTINGS_FILE, default={})
+        return settings if isinstance(settings, dict) else {}
 
     def save_settings(self, settings):
         try:
-            with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(settings, f, ensure_ascii=False, indent=4)
-            return True
+            return _atomic_write_json(SETTINGS_FILE, settings)
         except Exception as e:
             print(f"Error saving settings: {e}")
             return str(e)
