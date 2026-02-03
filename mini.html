@@ -441,6 +441,7 @@
             align-items: center;
             gap: 10px;
             margin-top: 0;
+            width: 100%;
             height: 42px;
             /* Fixed height to prevent logo shift when font size changes */
             position: relative;
@@ -457,6 +458,7 @@
             position: relative;
             margin-top: 2px;
             /* Shifted down slightly */
+            flex: 0 0 auto;
         }
 
         .mode-icon-svg svg {
@@ -476,6 +478,7 @@
             line-height: 1.2;
             /* Slightly increased for stability */
             padding-top: 0;
+            padding-right: 2px;
             background: linear-gradient(180deg, #fff 0%, #ddd 100%);
             background-clip: text;
             -webkit-background-clip: text;
@@ -486,6 +489,9 @@
             display: flex;
             align-items: center;
             height: 100%;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
         }
 
         /* Aligned with Main Window's finished-entry */
@@ -656,6 +662,34 @@
         const statusDot = document.getElementById('status-dot');
         const card = document.getElementById('card');
 
+        function fitTimerText() {
+            if (!timerText) return;
+
+            timerText.style.fontSize = '';
+
+            const available = timerText.clientWidth;
+            const needed = timerText.scrollWidth;
+            if (!available || !needed || needed <= available) return;
+
+            const computed = window.getComputedStyle(timerText);
+            const basePx = parseFloat(computed.fontSize) || 0;
+            if (!basePx) return;
+
+            const minPx = 16;
+            let nextPx = Math.floor(basePx * (available / needed));
+            if (nextPx < minPx) nextPx = minPx;
+
+            timerText.style.fontSize = `${nextPx}px`;
+
+            if (timerText.scrollWidth > timerText.clientWidth && nextPx > minPx) {
+                timerText.style.fontSize = `${Math.max(minPx, nextPx - 1)}px`;
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(fitTimerText);
+        });
+
         function updateDisplay(data) {
             // Data structure: { time: "00:00", mainCat: "...", subCat: "...", isPaused: bool, mode: "...", miniEffect: "...", appFont: "..." }
             if (data.appFont) {
@@ -748,6 +782,8 @@
                 countdownIcon.style.display = 'none';
                 stopwatchIcon.style.display = 'block';
             }
+
+            requestAnimationFrame(fitTimerText);
         }
 
         function closeMini() {
