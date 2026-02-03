@@ -1150,6 +1150,31 @@ def setup_hotkeys(window):
     # This is called once on start. We will wait for JS to tell us the user's preferred hotkey.
     pass
 
+def _destroy_mini_window():
+    global mini_window
+    if not mini_window:
+        return
+    try:
+        mini_window.destroy()
+    except Exception:
+        pass
+    mini_window = None
+
+def _bind_close_to_destroy_mini(window):
+    def _on_close(*_args, **_kwargs):
+        _destroy_mini_window()
+
+    try:
+        window.events.closing += _on_close
+        return
+    except Exception:
+        pass
+
+    try:
+        window.events.closed += _on_close
+    except Exception:
+        pass
+
 if __name__ == '__main__':
     init_db()
     
@@ -1167,6 +1192,10 @@ if __name__ == '__main__':
     
     # Set main window icon
     set_window_icon('专注Focus', 'icon.ico')
+    _bind_close_to_destroy_mini(main_window)
     
     # Use a thread or a hook to setup hotkeys after window is ready
     webview.start(setup_hotkeys, main_window, debug=False)
+
+    # Fallback: ensure mini is closed when the app exits (in case event hooks aren't available).
+    _destroy_mini_window()
