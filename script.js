@@ -1158,6 +1158,12 @@ window.addEventListener('pywebviewready', async () => {
         currentHotkey = settings.hotkey;
     }
 
+    // Default: auto-open mini window on app start (can be disabled via settings.json)
+    if (settings.openMiniOnStart === undefined) {
+        settings.openMiniOnStart = true;
+        window.pywebview.api.save_settings(settings);
+    }
+
     // Prefer file settings; fall back to localStorage; otherwise default to Germany (UTC+1).
     const storedTz = localStorage.getItem(LOCAL_TZ_KEY);
     const initialTz = settings.timezone || storedTz || 'UTC+1';
@@ -1219,6 +1225,12 @@ window.addEventListener('pywebviewready', async () => {
         glassBlurSlider.value = settings.glassBlur;
         blurValueDisplay.textContent = settings.glassBlur + 'px';
         document.documentElement.style.setProperty('--glass-blur', settings.glassBlur + 'px');
+    }
+
+    // Auto-open mini window after initial UI/settings sync
+    if (settings.openMiniOnStart) {
+        window.pywebview.api.toggle_mini_window();
+        setTimeout(pushDataToMini, 500);
     }
 });
 

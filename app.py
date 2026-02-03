@@ -212,6 +212,72 @@ def _atomic_write_json(path, data):
             except Exception:
                 pass
 
+def _get_window_pos_by_title(window_title):
+    """Returns (x, y) in screen coords for the window's top-left corner (Windows only)."""
+    if os.name != 'nt':
+        return None
+
+    try:
+        user32 = ctypes.windll.user32
+        hwnd = user32.FindWindowW(None, window_title)
+        if not hwnd:
+            return None
+
+        rect = wintypes.RECT()
+        if not user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            return None
+        return int(rect.left), int(rect.top)
+    except Exception:
+        return None
+
+def _move_window_by_title(window_title, x, y):
+    """Moves a window to (x, y) without changing size or z-order (Windows only)."""
+    if os.name != 'nt':
+        return False
+
+    try:
+        user32 = ctypes.windll.user32
+        hwnd = user32.FindWindowW(None, window_title)
+        if not hwnd:
+            return False
+
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_NOACTIVATE = 0x0010
+
+        return bool(user32.SetWindowPos(hwnd, 0, int(x), int(y), 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE))
+    except Exception:
+        return False
+
+def _persist_mini_window_position():
+    pos = _get_window_pos_by_title('Focus Mini')
+    if not pos:
+        return
+
+    x, y = pos
+    settings = _read_json_file(SETTINGS_FILE, default={})
+    if not isinstance(settings, dict):
+        settings = {}
+
+    settings['miniWindowPos'] = {'x': x, 'y': y}
+    _atomic_write_json(SETTINGS_FILE, settings)
+
+def _restore_mini_window_position():
+    settings = _read_json_file(SETTINGS_FILE, default={})
+    if not isinstance(settings, dict):
+        return False
+
+    pos = settings.get('miniWindowPos')
+    if not isinstance(pos, dict):
+        return False
+
+    x = pos.get('x')
+    y = pos.get('y')
+    if not isinstance(x, int) or not isinstance(y, int):
+        return False
+
+    return _move_window_by_title('Focus Mini', x, y)
+
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -1098,6 +1164,7 @@ class Api:
     def toggle_mini_window(self):
         global mini_window
         if mini_window:
+            _persist_mini_window_position()
             mini_window.destroy()
             mini_window = None
             return False
@@ -1117,6 +1184,10 @@ class Api:
             # Apply icon and hide from taskbar
             set_window_icon('Focus Mini', 'icon.ico')
             hide_from_taskbar('Focus Mini')
+
+            # Restore last position (best-effort; window creation is async)
+            for delay in [0.05, 0.2, 0.6, 1.2]:
+                threading.Timer(delay, _restore_mini_window_position).start()
             return True
 
     def update_mini_data(self, data):
@@ -1184,6 +1255,7 @@ def _destroy_mini_window():
     global mini_window
     if not mini_window:
         return
+    _persist_mini_window_position()
     try:
         mini_window.destroy()
     except Exception:
