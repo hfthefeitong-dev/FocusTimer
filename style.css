@@ -795,7 +795,12 @@ header {
     margin-left: 8px;
 }
 
-/* Show reset button when not in initial state */
+/* Show reset button while focusing (including paused) */
+.is-focusing .reset-btn {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
 
 /* Routine UI Styles */
 .routine-list-header {
