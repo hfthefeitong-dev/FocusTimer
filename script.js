@@ -177,8 +177,124 @@ const settingsOverlay = document.getElementById('settings-overlay');
 const hotkeyInput = document.getElementById('hotkey-input');
 const saveHotkeyBtn = document.getElementById('save-hotkey');
 const clearDbBtn = document.getElementById('clear-db-btn');
+
 const glassBlurSlider = document.getElementById('glass-blur-slider');
 const blurValueDisplay = document.getElementById('blur-value-display');
+
+// Routine DOM
+const openRoutineBtn = document.getElementById('open-routine');
+const closeRoutineBtn = document.getElementById('close-routine');
+const routineOverlay = document.getElementById('routine-overlay');
+const addRoutineItemBtn = document.getElementById('add-routine-item-btn');
+const routineItemsList = document.getElementById('routine-items-list');
+
+openRoutineBtn.onclick = () => {
+    routineOverlay.classList.add('active');
+    // Initialize with one item if empty
+    if (routineItemsList.children.length === 0) {
+        addRoutineItem();
+    }
+};
+
+closeRoutineBtn.onclick = () => {
+    routineOverlay.classList.remove('active');
+};
+
+function addRoutineItem(main = null, sub = null, duration = 25, rest = 5) {
+    const div = document.createElement('div');
+    div.className = 'routine-item-row';
+
+    // Create Selects
+    const mainSelect = document.createElement('select');
+    mainSelect.className = 'routine-select';
+
+    const subSelect = document.createElement('select');
+    subSelect.className = 'routine-select';
+
+    // Populate Main
+    const mainKeys = Object.keys(categoryConfig).filter(k => !categoryConfig[k].hidden);
+    if (mainKeys.length === 0) {
+        mainKeys.push("默认");
+    }
+
+    mainKeys.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k;
+        opt.textContent = k;
+        mainSelect.appendChild(opt);
+    });
+
+    // Initial Selection
+    if (main && mainKeys.includes(main)) {
+        mainSelect.value = main;
+    } else {
+        mainSelect.value = mainKeys[0];
+    }
+
+    // Function to update Sub options
+    const updateSubs = () => {
+        const selectedMain = mainSelect.value;
+        subSelect.innerHTML = '';
+        const config = categoryConfig[selectedMain] || { subs: ["默认"] };
+        const subs = config.subs || ["默认"];
+
+        subs.forEach(s => {
+            // Optional: Filter hidden subs if you want to strictly match settings logic
+            // const isHidden = config.hiddenSubs && config.hiddenSubs.includes(s);
+            // if(!isHidden) ...
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            subSelect.appendChild(opt);
+        });
+
+        // Restore sub selection if valid for this main category
+        if (sub && subs.includes(sub)) {
+            subSelect.value = sub;
+        } else if (subs.length > 0) {
+            subSelect.value = subs[0];
+        }
+    };
+
+    mainSelect.onchange = () => {
+        sub = null; // Clear manual sub preference on main change
+        updateSubs();
+    };
+
+    // Initialize Subs
+    updateSubs();
+
+    // Inputs for Time
+    const durationInput = document.createElement('input');
+    durationInput.type = 'number';
+    durationInput.className = 'routine-input num';
+    durationInput.value = duration;
+    durationInput.placeholder = '分';
+
+    const restInput = document.createElement('input');
+    restInput.type = 'number';
+    restInput.className = 'routine-input num';
+    restInput.value = rest;
+    restInput.placeholder = '分';
+
+    // Delete Button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'icon-btn danger';
+    delBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    delBtn.onclick = () => div.remove();
+
+    div.appendChild(mainSelect);
+    div.appendChild(subSelect);
+    div.appendChild(durationInput);
+    div.appendChild(restInput);
+    div.appendChild(delBtn);
+
+    routineItemsList.appendChild(div);
+}
+
+addRoutineItemBtn.onclick = () => {
+    addRoutineItem();
+};
 
 // Initialize all dropdowns
 const miniEffect = setupCustomDropdown('mini-effect', async (v) => {

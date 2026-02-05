@@ -136,6 +136,14 @@
                     </svg>
                     <span>悬浮窗</span>
                 </button>
+                <button id="open-routine" class="glass-btn small" title="设置专注序列">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 11l3 3L22 4"></path>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>ROUTINE™</span>
+                </button>
             </div>
             <p id="focus-quote" class="quote"></p>
         </footer>
@@ -369,6 +377,33 @@
                 </div>
                 <div class="canvas-container distribution">
                     <canvas id="distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Routine Overlay -->
+    <div id="routine-overlay" class="overlay-full">
+        <div class="glass-container small-modal" style="max-width: 500px;">
+            <header>
+                <h2>ROUTINE™ 序列设置</h2>
+                <button id="close-routine" class="icon-btn">×</button>
+            </header>
+            <div class="settings-content">
+                <div class="routine-list-header">
+                    <span>大类</span>
+                    <span>子类</span>
+                    <span style="text-align: center;">专注(分)</span>
+                    <span style="text-align: center;">休息(分)</span>
+                    <span></span>
+                </div>
+                <div id="routine-items-list" class="routine-list-container">
+                    <!-- Dynamic Items -->
+                </div>
+                <button id="add-routine-item-btn" class="glass-btn dashed full-width">+ 添加步骤</button>
+
+                <div class="routine-actions">
+                    <button id="start-routine-btn" class="glass-btn primary full-width">开始序列</button>
                 </div>
             </div>
         </div>
