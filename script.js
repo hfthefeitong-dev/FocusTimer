@@ -273,11 +273,6 @@ function addRoutineItem(main = null, sub = null, duration = 25, rest = 5) {
         }
     };
 
-    mainSelect.onchange = () => {
-        sub = null; // Clear manual sub preference on main change
-        updateSubs();
-    };
-
     // Initialize Subs
     updateSubs();
 
@@ -808,7 +803,7 @@ startRoutineBtn.onclick = () => {
 
     // Initialize first segment and start timer loops.
     routineEnterSegment(0);
-    startTimer();
+    startTimer({ seedSessionId: currentSessionId });
 };
 
 // Initialize all dropdowns
@@ -1983,7 +1978,7 @@ minsInput.oninput = () => {
 };
 
 // Timer Logic
-function startTimer() {
+function startTimer(opts = null) {
     isFocusing = true;
     isPaused = false;
     isFinishing = false;
@@ -1998,7 +1993,8 @@ function startTimer() {
     focusStartTimestamp = Date.now();
     sessionStartTimestamp = focusStartTimestamp;
     sessionDuration = 0;
-    currentSessionId = generateSessionId();
+    const seedSessionId = (opts && typeof opts === 'object') ? opts.seedSessionId : null;
+    currentSessionId = (typeof seedSessionId === 'string' && seedSessionId.trim()) ? seedSessionId : generateSessionId();
     hideFinishSummary();
 
     // Lock categories

@@ -19,6 +19,20 @@ DB_PATH = 'focus_data.db'
 main_window = None
 mini_window = None
 
+def _connect_db():
+    """
+    Centralized SQLite connection helper.
+    - Adds a small busy timeout to reduce transient 'database is locked' errors.
+    - Keeps per-call connections (pywebview may invoke API methods on worker threads).
+    """
+    conn = sqlite3.connect(DB_PATH, timeout=5)
+    try:
+        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute("PRAGMA foreign_keys=ON")
+    except Exception:
+        pass
+    return conn
+
 # Windows taskbar separate identity setup
 APP_ID = u'antigravity.focus.v1'
 try:
@@ -279,7 +293,7 @@ def _restore_mini_window_position():
     return _move_window_by_title('Focus Mini', x, y)
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = _connect_db()
     cursor = conn.cursor()
     # Basic table
     cursor.execute('''
@@ -346,9 +360,7 @@ class Api:
 
     def save_categories(self, config):
         try:
-            with open(CAT_FILE, 'w', encoding='utf-8') as f:
-                json.dump(config, f, ensure_ascii=False, indent=4)
-            return True
+            return _atomic_write_json(CAT_FILE, config)
         except Exception as e:
             print(f"Error saving categories: {e}")
             return str(e)
@@ -365,7 +377,14 @@ class Api:
             return str(e)
 
     def close_app(self):
-        window.destroy()
+        global main_window
+        try:
+            if main_window:
+                main_window.destroy()
+                return True
+        except Exception as e:
+            return str(e)
+        return False
 
     def save_session(self, main_cat, sub_cat, duration, session_id=None, segment_start_ts=None, segment_end_ts=None, segment_reason=None):
         if duration is None:
@@ -392,7 +411,7 @@ class Api:
         if main_cat in ('阅读', '看书') and (sub_cat is None or str(sub_cat).strip() == '' or sub_cat == '默认'):
             sub_cat = '卡拉马佐夫兄弟'
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         
         # Store in UTC as Unix epoch seconds (INTEGER). We treat this as the segment end time.
@@ -421,7 +440,7 @@ class Api:
         return True
 
     def clear_database(self):
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM focus_sessions")
         conn.commit()
@@ -429,7 +448,7 @@ class Api:
         return True
 
     def delete_category_data(self, main_cat_name):
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM focus_sessions WHERE main_cat = ?", (main_cat_name,))
         conn.commit()
@@ -437,7 +456,7 @@ class Api:
         return True
 
     def rename_category_data(self, old_main, new_main, old_sub=None, new_sub=None):
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         if old_sub and new_sub:
             # Rename sub-category within a main category
@@ -628,7 +647,7 @@ class Api:
         Fetch raw sessions for downstream split-aggregation.
         Returns: (rows, offset_total_seconds, user_now, today_local)
         """
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         offset_str, offset_hours = self.get_user_offset()
@@ -1008,7 +1027,7 @@ class Api:
 
         return data_map
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         
         offset_str, offset_hours = self.get_user_offset()
@@ -1130,7 +1149,7 @@ class Api:
 
         return totals
 
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         
         offset_str, offset_hours = self.get_user_offset()
