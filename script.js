@@ -285,12 +285,16 @@ function addRoutineItem(main = null, sub = null, duration = 25, rest = 5) {
     const durationInput = document.createElement('input');
     durationInput.type = 'number';
     durationInput.className = 'routine-input num';
+    durationInput.min = '5';
+    durationInput.step = '5';
     durationInput.value = duration;
     durationInput.placeholder = '分';
 
     const restInput = document.createElement('input');
     restInput.type = 'number';
     restInput.className = 'routine-input num';
+    restInput.min = '0';
+    restInput.step = '5';
     restInput.value = rest;
     restInput.placeholder = '分';
 
