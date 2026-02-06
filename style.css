@@ -1941,3 +1941,333 @@ body.is-focusing {
     scrollbar-width: thin;
     /* For Firefox */
 }
+
+.bg-preset.custom:hover span {
+    color: white;
+}
+
+/* Routine Status Bar */
+/* ... (existing routine styles are lower down) */
+
+
+.mini-input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: white;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    width: 60px;
+    text-align: center;
+    outline: none;
+    transition: 0.2s;
+    /* Hide specific to Firefox */
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.mini-input:focus {
+    background: rgba(0, 0, 0, 0.5);
+    border-color: var(--primary-color);
+}
+
+.mini-input::-webkit-outer-spin-button,
+.mini-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Today's Goals View Styles */
+.goals-view-section {
+    width: 100%;
+    margin-top: -0.5rem;
+    animation: fadeIn 0.6s ease-out;
+}
+
+.goals-view-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+.goals-view-header h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
+    letter-spacing: 1px;
+}
+
+.header-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--glass-border), transparent);
+}
+
+.goals-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+.goal-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.goal-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.goal-card.completed {
+    border-color: rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.goal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.goal-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: white;
+}
+
+.goal-card-time {
+    font-size: 0.8rem;
+    font-family: var(--timer-font);
+    color: var(--primary-color);
+}
+
+.goal-card.completed .goal-card-time {
+    color: #10b981;
+}
+
+.goal-progress-container {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.goal-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), #a855f7);
+    border-radius: 10px;
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.goal-card.completed .goal-progress-bar {
+    background: linear-gradient(90deg, #10b981, #3b82f6);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.goal-percentage {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-align: right;
+    font-weight: 500;
+}
+
+.goal-card.completed .goal-percentage {
+    color: #10b981;
+}
+
+@keyframes card-pulse {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.goal-card.active {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+.sub-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    opacity: 0.8;
+}
+
+/* Custom Scrollbar Styles - Hidden for main window */
+::-webkit-scrollbar {
+    display: none;
+}
+
+/* Restore visible scrollbars for specific scrollable areas */
+.settings-content::-webkit-scrollbar,
+.cat-scroll-list::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-thumb,
+.cat-scroll-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover,
+.cat-scroll-list::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+.settings-content,
+.cat-scroll-list {
+    scrollbar-width: thin;
+    /* For Firefox */
+}
+
+/* Routine Status Bar */
+.routine-status-bar {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    /* Initially hidden below */
+    width: 600px;
+    /* Or max-width */
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 16px 24px;
+    z-index: 2000;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+    pointer-events: none;
+}
+
+.routine-status-bar.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.routine-status-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.routine-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    color: #fff;
+}
+
+.routine-info-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.routine-state {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 2px;
+}
+
+.routine-current-item {
+    font-size: 0.95rem;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.routine-progress-track {
+    display: flex;
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: visible;
+    gap: 2px;
+}
+
+.routine-progress-segment {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    transition: background 0.3s;
+}
+
+.routine-progress-segment:first-child {
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+
+.routine-progress-segment:last-child {
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+}
+
+.routine-progress-segment.focus {
+    background: var(--primary-color);
+}
+
+.routine-progress-segment.rest {
+    background: rgba(16, 185, 129, 0.8);
+    /* Greenish for rest */
+}
+
+.routine-progress-segment.pending {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes goldenPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 223, 0, 0), 0 0 0 0 rgba(255, 215, 0, 0), inset 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+
+    50% {
+        box-shadow:
+            0 0 0 1px rgba(255, 223, 0, 0.7),
+            /* Sharp external border (1px) */
+            0 0 12px 2px rgba(255, 215, 0, 0.45),
+            /* Soft outer bloom */
+            inset 0 0 10px rgba(255, 255, 255, 0.5);
+        /* Intensified inner glow */
+    }
+}
+
+.routine-progress-segment.active {
+    background: var(--primary-color);
+    animation: goldenPulse 1.5s infinite ease-in-out;
+    /* Slower, more elegant pulse */
+    z-index: 10;
+    position: relative;
+    border: none;
+}

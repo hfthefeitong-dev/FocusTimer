@@ -296,6 +296,111 @@ addRoutineItemBtn.onclick = () => {
     addRoutineItem();
 };
 
+const startRoutineBtn = document.getElementById('start-routine-btn');
+const routineStatusBar = document.getElementById('routine-status-bar');
+const routineProgressTrack = document.getElementById('routine-progress-track');
+
+startRoutineBtn.onclick = () => {
+    // 1. Gather all items
+    const rows = routineItemsList.querySelectorAll('.routine-item-row');
+    const items = [];
+    let totalTime = 0;
+
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        // inputs[0] is duration, inputs[1] is rest
+        // Note: Check if they are 'num' class or by index.
+        // Based on our addRoutineItem: 
+        // div children: mainSelect, subSelect, durationInput, restInput, delBtn
+
+        // Selects
+        const selects = row.querySelectorAll('select');
+        const main = selects[0].value;
+        const sub = selects[1].value;
+
+        // Inputs
+        const durationInput = row.querySelector('input:nth-of-type(1)'); // Duration
+        const restInput = row.querySelector('input:nth-of-type(2)'); // Rest
+
+        const duration = parseInt(durationInput.value) || 0;
+        const rest = parseInt(restInput.value) || 0;
+
+        if (duration > 0) {
+            items.push({ type: 'focus', duration, main, sub });
+            totalTime += duration;
+        }
+        if (rest > 0) {
+            items.push({ type: 'rest', duration: rest });
+            totalTime += rest;
+        }
+    });
+
+    if (items.length === 0) {
+        alert('请添加至少一个有效的专注步骤');
+        return;
+    }
+
+    // 2. Build Progress Bar
+    routineProgressTrack.innerHTML = '';
+    items.forEach(item => {
+        const seg = document.createElement('div');
+        seg.className = `routine-progress-segment ${item.type}`;
+        // Calculate width percentage
+        const pct = (item.duration / totalTime) * 100;
+        seg.style.width = `${pct}%`;
+
+        // Tooltip
+        let title = item.type === 'focus' ? `${item.main} - ${item.sub}` : '休息';
+        title += ` (${item.duration}分)`;
+        seg.title = title;
+
+        routineProgressTrack.appendChild(seg);
+    });
+
+    // 3. Show Status Bar & Close Overlay
+    routineOverlay.classList.remove('active');
+    setTimeout(() => {
+        routineStatusBar.classList.add('active');
+
+        // Activate first segment
+        const firstSeg = routineProgressTrack.querySelector('.routine-progress-segment');
+        if (firstSeg) firstSeg.classList.add('active');
+
+        // Set Current Item Name
+        // Set Current Item Name
+        const currentItemEl = document.getElementById('routine-current-item');
+
+        try {
+            if (!currentItemEl) {
+                console.error("Routine label element not found!");
+            }
+
+            if (items.length > 0) {
+                const firstItem = items[0];
+                console.log("First Item:", firstItem);
+
+                if (firstItem.type === 'focus') {
+                    // Update content
+                    const text = `${firstItem.main} - ${firstItem.sub}`;
+                    currentItemEl.textContent = text;
+                    currentItemEl.innerText = text; // Try both
+                } else {
+                    currentItemEl.textContent = '休息';
+                }
+            } else {
+                console.error("Items array is empty in timeout!");
+            }
+        } catch (e) {
+            console.error("Error setting routine text:", e);
+        }
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            routineStatusBar.classList.remove('active');
+        }, 3000);
+    }, 300);
+};
+
 // Initialize all dropdowns
 const miniEffect = setupCustomDropdown('mini-effect', async (v) => {
     if (window.pywebview) {
