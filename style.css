@@ -773,7 +773,7 @@ header {
 }
 
 .reset-btn.confirming {
-    width: 120px;
+    width: 160px;
     border-radius: 50px;
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.5);
@@ -2294,4 +2294,8 @@ body.is-focusing {
     z-index: 10;
     position: relative;
     border: none;
+}
+
+.routine-status-bar.completed .routine-progress-segment.active {
+    animation: none;
 }

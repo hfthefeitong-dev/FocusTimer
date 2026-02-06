@@ -17,6 +17,7 @@ let pauseCount = 0;
 // Keep the same on-screen summary duration as the normal (non-ROUTINE) flow.
 // Note: finishTimer() currently reverts after ~5s; we mirror that here.
 const ROUTINE_FOCUS_SUMMARY_MS = 5000;
+const ROUTINE_REVERT_FADE_MS = 600;
 let routineTransitionTimeout = null;
 let routineFadeTimeout = null;
 let routineBarAutoHideTimeout = null;
@@ -315,8 +316,15 @@ addRoutineItemBtn.onclick = () => {
 const startRoutineBtn = document.getElementById('start-routine-btn');
 const routineStatusBar = document.getElementById('routine-status-bar');
 const routineProgressTrack = document.getElementById('routine-progress-track');
+const routineTitleEl = routineStatusBar ? routineStatusBar.querySelector('.routine-title') : null;
 const routineCurrentItemEl = document.getElementById('routine-current-item');
 const routineStateEl = routineStatusBar ? routineStatusBar.querySelector('.routine-state') : null;
+const ROUTINE_TITLE_DEFAULT = 'ROUTINE™';
+
+function routineSetTitle(text) {
+    if (!routineTitleEl) return;
+    routineTitleEl.textContent = text || '';
+}
 
 function routineCurrentItem() {
     if (!routine.active) return null;
@@ -424,12 +432,30 @@ function routineUpdateProgressActive() {
     });
 }
 
+function routineMarkAllSegmentsDone() {
+    const segs = routineProgressTrack
+        ? Array.from(routineProgressTrack.querySelectorAll('.routine-progress-segment'))
+        : (Array.isArray(routine.segments) ? routine.segments : []);
+
+    segs.forEach((seg) => {
+        if (!seg) return;
+        seg.classList.remove('active');
+        seg.classList.add('done');
+    });
+}
+
 function routineSetStatusText(stateText, subtitleText) {
     if (routineStateEl) routineStateEl.textContent = stateText || '';
     if (routineCurrentItemEl) routineCurrentItemEl.textContent = subtitleText || '';
 }
 
 function routineShowCompletionBar() {
+    if (routineStatusBar) routineStatusBar.classList.add('completed');
+
+    const segs = routineProgressTrack
+        ? Array.from(routineProgressTrack.querySelectorAll('.routine-progress-segment'))
+        : (Array.isArray(routine.segments) ? routine.segments : []);
+
     if (Array.isArray(routine.segments) && routine.segments.length > 0) {
         routine.segments.forEach((seg) => {
             if (!seg) return;
@@ -437,6 +463,14 @@ function routineShowCompletionBar() {
             seg.classList.add('done');
         });
     }
+
+    // Extra safety: ensure the DOM doesn't keep any lingering `.active` segment.
+    segs.forEach((seg) => {
+        if (!seg) return;
+        seg.classList.remove('active');
+        seg.classList.add('done');
+    });
+
     routineSetStatusText('ROUTINE已完成', '');
     routineShowStatusBar(null);
 }
@@ -504,6 +538,8 @@ function routineEnterSegment(index) {
 
     document.body.classList.add('routine-running');
     syncResetBtnForRoutine();
+    if (routineStatusBar) routineStatusBar.classList.remove('completed');
+    routineSetTitle(ROUTINE_TITLE_DEFAULT);
 
     routineUpdateStatusBar();
     routineUpdateProgressActive();
@@ -528,6 +564,17 @@ function routineEnterSegment(index) {
         btnText.textContent = '暂停休息';
         mainBtn.classList.remove('paused');
     } else {
+        // When entering a focus segment from rest, bring main window to the front.
+        try {
+            if (
+                window.pywebview &&
+                window.pywebview.api &&
+                typeof window.pywebview.api.bring_main_to_front === 'function'
+            ) {
+                window.pywebview.api.bring_main_to_front();
+            }
+        } catch { }
+
         routineShowStatusBar(5000); // Focus: show briefly, then hide
         routineApplyMainVisualState('focus');
         routineHideRestUI();
@@ -571,6 +618,8 @@ function routinePlayFocusSummaryThen(nextFn) {
     // Pop the ROUTINE bar back up and show what's next.
     routineShowStatusBar(null);
     const nextItem = routine.items[routine.index + 1] || null;
+    const willFinishRoutine = !nextItem;
+    if (willFinishRoutine && routineStatusBar) routineStatusBar.classList.add('completed');
     if (nextItem && nextItem.type === 'rest') {
         routineSetStatusText('专注完成', `即将进入休息（${nextItem.durationMin || 0}分）`);
     } else if (nextItem && nextItem.type === 'focus') {
@@ -579,7 +628,11 @@ function routinePlayFocusSummaryThen(nextFn) {
         const label = (!s || s === '默认') ? m : `${m} - ${s}`;
         routineSetStatusText('专注完成', `即将进入：${label}`);
     } else {
-        routineSetStatusText('专注完成', 'ROUTINE已完成');
+        // Last item: mark the progress as completed (no lingering active state).
+        routineMarkAllSegmentsDone();
+        // Last item: show completion on the left title, keep right side blank.
+        routineSetTitle('ROUTINE™已完成');
+        routineSetStatusText('', '');
     }
 
     // Show "专注完成" with animation only (no typography overrides), and keep summary duration consistent.
@@ -600,13 +653,41 @@ function routinePlayFocusSummaryThen(nextFn) {
     showFinishSummary();
 
     routineTransitionTimeout = setTimeout(() => {
-        hideFinishSummary();
-        timerBox.classList.remove('finished');
-        try {
-            if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
-        } catch { }
-        routine.isTransitioning = false;
-        nextFn();
+        // Match non-ROUTINE: fade out then revert to timer smoothly.
+        timerBox.style.opacity = '0';
+        timerBox.style.filter = 'blur(10px)';
+        timerBox.style.transform = 'scale(0.95)';
+        timerBox.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+        routineFadeTimeout = setTimeout(() => {
+            hideFinishSummary();
+            timerBox.classList.remove('finished');
+            try {
+                if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
+            } catch { }
+            if (willFinishRoutine) {
+                // End together with the focus summary.
+                routineHideStatusBar();
+            }
+
+            routine.isTransitioning = false;
+            nextFn();
+
+            // Fade back in (new timer content will already be set by nextFn()).
+            // Be robust against nextFn() (e.g. resetEverything) modifying styles synchronously.
+            try {
+                const transition = timerBox.style.transition || 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                timerBox.style.transition = 'none';
+                timerBox.style.opacity = '0';
+                timerBox.style.filter = 'blur(10px)';
+                timerBox.style.transform = 'scale(0.95)';
+                void timerBox.offsetWidth;
+                timerBox.style.transition = transition;
+                timerBox.style.opacity = '';
+                timerBox.style.filter = '';
+                timerBox.style.transform = '';
+            } catch { }
+        }, ROUTINE_REVERT_FADE_MS);
     }, ROUTINE_FOCUS_SUMMARY_MS);
 }
 
@@ -624,17 +705,22 @@ function routineStop(reason = 'manual') {
     routineClearTransitionTimers();
     routine.isTransitioning = false;
 
-    // Best-effort flush + save if we are in a focus segment.
-    try {
-        if (isFocusing && !isPaused) updateTimerLogic(false);
-    } catch { }
-
-    const wasRest = routineIsRest();
-    const item = routineCurrentItem();
-    if (item && item.type === 'focus' && !wasRest) {
+    // Avoid double-counting: for natural completion, the focus segment has already been saved
+    // at the exact moment the countdown reached 0 inside updateTimerLogic().
+    const shouldFlushAndSave = reason !== 'done';
+    if (shouldFlushAndSave) {
+        // Best-effort flush + save if we are in a focus segment.
+        const wasRest = routineIsRest();
         try {
-            saveSessionToDB('end');
+            if (isFocusing && !isPaused && !wasRest) updateTimerLogic(false);
         } catch { }
+
+        const item = routineCurrentItem();
+        if (item && item.type === 'focus' && !wasRest) {
+            try {
+                saveSessionToDB('end');
+            } catch { }
+        }
     }
 
     const shouldShowCompletion = reason === 'done';
@@ -646,6 +732,8 @@ function routineStop(reason = 'manual') {
     syncResetBtnForRoutine();
     if (resetBtn) resetBtn.classList.remove('confirming');
     if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
+    if (routineStatusBar) routineStatusBar.classList.remove('completed');
+    routineSetTitle(ROUTINE_TITLE_DEFAULT);
 
     // Stop loops and reset the main UI to idle without double-saving.
     resetEverything(false);
@@ -654,9 +742,26 @@ function routineStop(reason = 'manual') {
 
     // Update / hide status bar after reset.
     if (shouldShowCompletion) {
-        routineShowCompletionBar();
+        // Completion message already shown during the focus summary; end together with it.
+        routineHideStatusBar();
     } else {
         routineHideStatusBar();
+    }
+
+    // Resync today's total from DB (ROUTINE rest/summary should not affect it).
+    if (
+        window.pywebview &&
+        window.pywebview.api &&
+        typeof window.pywebview.api.get_today_total === 'function'
+    ) {
+        try {
+            window.pywebview.api.get_today_total().then((secs) => {
+                const v = parseInt(secs, 10);
+                if (!Number.isFinite(v)) return;
+                dailyTotalSeconds = v;
+                updateDailyDisplay();
+            });
+        } catch { }
     }
 
     routine.items = [];
@@ -695,6 +800,7 @@ startRoutineBtn.onclick = () => {
     routine.isTransitioning = false;
     document.body.classList.add('routine-running');
     syncResetBtnForRoutine();
+    routineSetTitle(ROUTINE_TITLE_DEFAULT);
 
     // Initialize first segment and start timer loops.
     routineEnterSegment(0);
