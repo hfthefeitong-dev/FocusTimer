@@ -18,9 +18,12 @@ let pauseCount = 0;
 // Note: finishTimer() currently reverts after ~5s; we mirror that here.
 const ROUTINE_FOCUS_SUMMARY_MS = 5000;
 const ROUTINE_REVERT_FADE_MS = 600;
+const ROUTINE_BAR_SHOW_DELAY_MS = 2000;
 let routineTransitionTimeout = null;
 let routineFadeTimeout = null;
 let routineBarAutoHideTimeout = null;
+let routineBarDelayTimeout = null;
+let routineIntroTimeout = null;
 
 const routine = {
     active: false,
@@ -276,6 +279,12 @@ function addRoutineItem(main = null, sub = null, duration = 25, rest = 5) {
     // Initialize Subs
     updateSubs();
 
+    // Keep sub options in sync with the selected main category.
+    mainSelect.onchange = () => {
+        sub = null; // Clear preferred sub once main changes
+        updateSubs();
+    };
+
     // Inputs for Time
     const durationInput = document.createElement('input');
     durationInput.type = 'number';
@@ -358,8 +367,12 @@ function routineHideRestUI() {
 function routineClearTransitionTimers() {
     if (routineTransitionTimeout) clearTimeout(routineTransitionTimeout);
     if (routineFadeTimeout) clearTimeout(routineFadeTimeout);
+    if (routineBarDelayTimeout) clearTimeout(routineBarDelayTimeout);
+    if (routineIntroTimeout) clearTimeout(routineIntroTimeout);
     routineTransitionTimeout = null;
     routineFadeTimeout = null;
+    routineBarDelayTimeout = null;
+    routineIntroTimeout = null;
 }
 
 function routineClearBarTimer() {
@@ -614,8 +627,14 @@ function routinePlayFocusSummaryThen(nextFn) {
     // Once focus ends, immediately exit focus visuals (summary and rest should not look like focusing).
     routineApplyMainVisualState('rest');
 
-    // Pop the ROUTINE bar back up and show what's next.
-    routineShowStatusBar(null);
+    // Delay showing the ROUTINE floating status bar after "专注完成".
+    // (Applies both for mid-ROUTINE transitions and final completion.)
+    routineHideStatusBar();
+    routineBarDelayTimeout = setTimeout(() => {
+        routineBarDelayTimeout = null;
+        routineShowStatusBar(null);
+    }, ROUTINE_BAR_SHOW_DELAY_MS);
+
     const nextItem = routine.items[routine.index + 1] || null;
     const willFinishRoutine = !nextItem;
     if (willFinishRoutine && routineStatusBar) routineStatusBar.classList.add('completed');
@@ -634,60 +653,69 @@ function routinePlayFocusSummaryThen(nextFn) {
         routineSetStatusText('', '');
     }
 
-    // Show "专注完成" with animation only (no typography overrides), and keep summary duration consistent.
-    timerBox.style.opacity = '';
-    timerBox.style.transform = '';
-    timerBox.style.filter = '';
-    timerBox.style.transition = '';
-    timerBox.classList.remove('finished');
+    // Match non-ROUTINE: fade out numerical timer first, then show "专注完成" and play entry animation.
+    timerBox.style.opacity = '0';
+    timerBox.style.transform = 'scale(0.95)';
+    timerBox.style.filter = 'blur(10px)';
+    timerBox.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
 
-    timerBox.textContent = '专注完成';
-    // Hide mode switch icon during the finish summary (consistent with normal finish flow).
-    try {
-        if (modeIconTrigger) modeIconTrigger.classList.add('force-hidden');
-    } catch { }
-    // Restart the CSS keyframe animation if we just finished a previous segment.
-    void timerBox.offsetWidth;
-    timerBox.classList.add('finished');
-    showFinishSummary();
+    routineIntroTimeout = setTimeout(() => {
+        routineIntroTimeout = null;
 
-    routineTransitionTimeout = setTimeout(() => {
-        // Match non-ROUTINE: fade out then revert to timer smoothly.
-        timerBox.style.opacity = '0';
-        timerBox.style.filter = 'blur(10px)';
-        timerBox.style.transform = 'scale(0.95)';
-        timerBox.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        timerBox.textContent = '专注完成';
+        timerBox.classList.remove('finished');
+        timerBox.style.opacity = '';
+        timerBox.style.transform = '';
+        timerBox.style.filter = '';
 
-        routineFadeTimeout = setTimeout(() => {
-            hideFinishSummary();
-            timerBox.classList.remove('finished');
-            try {
-                if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
-            } catch { }
-            if (willFinishRoutine) {
-                // End together with the focus summary.
-                routineHideStatusBar();
-            }
+        // Hide mode switch icon during the finish summary (consistent with normal finish flow).
+        try {
+            if (modeIconTrigger) modeIconTrigger.classList.add('force-hidden');
+        } catch { }
 
-            routine.isTransitioning = false;
-            nextFn();
+        // Restart the CSS keyframe animation if we just finished a previous segment.
+        void timerBox.offsetWidth;
+        timerBox.classList.add('finished');
+        showFinishSummary();
 
-            // Fade back in (new timer content will already be set by nextFn()).
-            // Be robust against nextFn() (e.g. resetEverything) modifying styles synchronously.
-            try {
-                const transition = timerBox.style.transition || 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
-                timerBox.style.transition = 'none';
-                timerBox.style.opacity = '0';
-                timerBox.style.filter = 'blur(10px)';
-                timerBox.style.transform = 'scale(0.95)';
-                void timerBox.offsetWidth;
-                timerBox.style.transition = transition;
-                timerBox.style.opacity = '';
-                timerBox.style.filter = '';
-                timerBox.style.transform = '';
-            } catch { }
-        }, ROUTINE_REVERT_FADE_MS);
-    }, ROUTINE_FOCUS_SUMMARY_MS);
+        routineTransitionTimeout = setTimeout(() => {
+            // Match non-ROUTINE: fade out then revert to timer smoothly.
+            timerBox.style.opacity = '0';
+            timerBox.style.filter = 'blur(10px)';
+            timerBox.style.transform = 'scale(0.95)';
+            timerBox.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+            routineFadeTimeout = setTimeout(() => {
+                hideFinishSummary();
+                timerBox.classList.remove('finished');
+                try {
+                    if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
+                } catch { }
+                if (willFinishRoutine) {
+                    // End together with the focus summary.
+                    routineHideStatusBar();
+                }
+
+                routine.isTransitioning = false;
+                nextFn();
+
+                // Fade back in (new timer content will already be set by nextFn()).
+                // Be robust against nextFn() (e.g. resetEverything) modifying styles synchronously.
+                try {
+                    const transition = timerBox.style.transition || 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+                    timerBox.style.transition = 'none';
+                    timerBox.style.opacity = '0';
+                    timerBox.style.filter = 'blur(10px)';
+                    timerBox.style.transform = 'scale(0.95)';
+                    void timerBox.offsetWidth;
+                    timerBox.style.transition = transition;
+                    timerBox.style.opacity = '';
+                    timerBox.style.filter = '';
+                    timerBox.style.transform = '';
+                } catch { }
+            }, ROUTINE_REVERT_FADE_MS);
+        }, ROUTINE_FOCUS_SUMMARY_MS);
+    }, 500);
 }
 
 function routineAdvanceToNextSegment() {
@@ -1177,6 +1205,7 @@ async function updateTodayGoalsView(forceFetch = false) {
     }
 
     // 1. Calculate stats for all goals first
+    const shouldCountLiveSession = isFocusing && !(routine.active && routineIsRest());
     const enrichedGoals = goalsList.map(goal => {
         const goalSecs = goal.goalMins * 60;
         const internalMap = { "学业": "study", "价格行为学": "pa", "看书": "reading" };
@@ -1199,7 +1228,7 @@ async function updateTodayGoalsView(forceFetch = false) {
         }
 
         let isActive = false;
-        if (isFocusing && goal.mainCat === selectedMainCat) {
+        if (shouldCountLiveSession && goal.mainCat === selectedMainCat) {
             if (goal.type === 'main') {
                 isActive = true;
                 doneSecs += sessionDuration;
@@ -1319,8 +1348,9 @@ async function updateGoalsDisplay(forceFetch = false) {
         goalBaseStats = { main: mDone, sub: sDone, lastFetch: now };
     }
 
-    const mTotal = goalBaseStats.main + (isFocusing ? sessionDuration : 0);
-    const sTotal = goalBaseStats.sub + (isFocusing ? sessionDuration : 0);
+    const shouldCountLiveSession = isFocusing && !(routine.active && routineIsRest());
+    const mTotal = goalBaseStats.main + (shouldCountLiveSession ? sessionDuration : 0);
+    const sTotal = goalBaseStats.sub + (shouldCountLiveSession ? sessionDuration : 0);
 
     if (mainGoalMins > 0) {
         const rem = Math.max(0, mainGoalMins * 60 - mTotal);
