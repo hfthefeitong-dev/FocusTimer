@@ -543,15 +543,11 @@ header {
 }
 
 .timer-text.finished {
-    font-family: var(--chinese-font);
-    font-weight: 600;
-    font-size: 6.5rem;
-    line-height: 1;
-    letter-spacing: normal;
-    padding: 0 10px;
     animation: finished-entry 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-    color: var(--primary-color);
-    text-shadow: 0 0 30px var(--primary-glow);
+}
+
+.timer-text.rest-entry {
+    animation: rest-entry 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .timer-text.mode-change-pop {
@@ -602,6 +598,11 @@ header {
     opacity: 0;
     visibility: hidden;
     transform: translateY(10px);
+}
+
+#countdown-picker.resting .finish-summary {
+    color: rgba(16, 185, 129, 0.9);
+    font-weight: 600;
 }
 
 .picker-container input {
@@ -795,8 +796,9 @@ header {
     margin-left: 8px;
 }
 
-/* Show reset button while focusing (including paused) */
-.is-focusing .reset-btn {
+/* Show reset button while focusing OR while ROUTINE is running (rest has no focus visuals). */
+.is-focusing .reset-btn,
+.routine-running .reset-btn {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
@@ -954,6 +956,20 @@ header {
     0% {
         opacity: 0;
         transform: scale(0.8) translateY(20px);
+        filter: blur(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0px);
+    }
+}
+
+@keyframes rest-entry {
+    0% {
+        opacity: 0;
+        transform: scale(0.92) translateY(14px);
         filter: blur(10px);
     }
 
@@ -2239,6 +2255,14 @@ body.is-focusing {
 .routine-progress-segment.rest {
     background: rgba(16, 185, 129, 0.8);
     /* Greenish for rest */
+}
+
+.routine-progress-segment.rest.active {
+    background: rgba(16, 185, 129, 0.8);
+}
+
+.routine-progress-segment.done {
+    opacity: 0.35;
 }
 
 .routine-progress-segment.pending {

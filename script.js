@@ -13,6 +13,22 @@ let sessionStartTimestamp = 0;
 let sessionActiveTotalSeconds = 0;
 let pauseCount = 0;
 
+// --- ROUTINE Runtime ---
+// Keep the same on-screen summary duration as the normal (non-ROUTINE) flow.
+// Note: finishTimer() currently reverts after ~5s; we mirror that here.
+const ROUTINE_FOCUS_SUMMARY_MS = 5000;
+let routineTransitionTimeout = null;
+let routineFadeTimeout = null;
+let routineBarAutoHideTimeout = null;
+
+const routine = {
+    active: false,
+    items: [],
+    index: 0,
+    isTransitioning: false,
+    segments: [],
+};
+
 function generateSessionId() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
     return `sid_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -299,106 +315,390 @@ addRoutineItemBtn.onclick = () => {
 const startRoutineBtn = document.getElementById('start-routine-btn');
 const routineStatusBar = document.getElementById('routine-status-bar');
 const routineProgressTrack = document.getElementById('routine-progress-track');
+const routineCurrentItemEl = document.getElementById('routine-current-item');
+const routineStateEl = routineStatusBar ? routineStatusBar.querySelector('.routine-state') : null;
 
-startRoutineBtn.onclick = () => {
-    // 1. Gather all items
+function routineCurrentItem() {
+    if (!routine.active) return null;
+    if (!Array.isArray(routine.items) || routine.items.length === 0) return null;
+    return routine.items[routine.index] || null;
+}
+
+function routineIsRest() {
+    const item = routineCurrentItem();
+    return !!(item && item.type === 'rest');
+}
+
+function routineShowRestUI() {
+    if (!countdownPicker || !finishSummary) return;
+    countdownPicker.classList.remove('hidden');
+    countdownPicker.classList.add('finish-mode');
+    countdownPicker.classList.add('resting');
+    finishSummary.textContent = '休息中';
+    finishSummary.classList.remove('hidden');
+}
+
+function routineHideRestUI() {
+    if (!countdownPicker) return;
+    countdownPicker.classList.remove('resting');
+    if (finishSummary) {
+        finishSummary.classList.add('hidden');
+        if (finishSummary.textContent === '休息中') finishSummary.textContent = '';
+    }
+    if (countdownPicker) countdownPicker.classList.remove('finish-mode');
+}
+
+function routineClearTransitionTimers() {
+    if (routineTransitionTimeout) clearTimeout(routineTransitionTimeout);
+    if (routineFadeTimeout) clearTimeout(routineFadeTimeout);
+    routineTransitionTimeout = null;
+    routineFadeTimeout = null;
+}
+
+function routineClearBarTimer() {
+    if (routineBarAutoHideTimeout) clearTimeout(routineBarAutoHideTimeout);
+    routineBarAutoHideTimeout = null;
+}
+
+function routineShowStatusBar(autoHideMs = null) {
+    if (!routineStatusBar) return;
+    routineClearBarTimer();
+    routineStatusBar.classList.add('active');
+    if (autoHideMs && autoHideMs > 0) {
+        routineBarAutoHideTimeout = setTimeout(() => {
+            routineStatusBar.classList.remove('active');
+            routineBarAutoHideTimeout = null;
+        }, autoHideMs);
+    }
+}
+
+function routineHideStatusBar() {
+    if (!routineStatusBar) return;
+    routineClearBarTimer();
+    routineStatusBar.classList.remove('active');
+}
+
+function routineApplyMainVisualState(kind) {
+    // This controls ONLY main-window visual state classes.
+    // ROUTINE keeps the timer running internally even when we exit "focus" visuals during rest.
+    const isFocus = kind === 'focus';
+    document.body.classList.toggle('is-focusing', isFocus);
+    document.body.classList.toggle('timer-active', isFocus);
+    if (!isFocus) {
+        document.body.classList.remove('is-paused');
+    }
+    mainBtn.classList.toggle('active', isFocus);
+}
+
+function routineUpdateStatusBar() {
+    const item = routineCurrentItem();
+    if (!item || !routineStatusBar) return;
+
+    const formatFocusLabel = (main, sub) => {
+        const m = (main || '未分类').toString().trim() || '未分类';
+        const s = (sub || '默认').toString().trim() || '默认';
+        if (!s || s === '默认') return m;
+        return `${m} - ${s}`;
+    };
+
+    if (routineStateEl) {
+        routineStateEl.textContent = item.type === 'rest' ? '休息中' : '专注中';
+    }
+    if (routineCurrentItemEl) {
+        if (item.type === 'rest') {
+            const nextFocus = routine.items.slice(routine.index + 1).find((it) => it && it.type === 'focus') || null;
+            const nextLabel = nextFocus ? formatFocusLabel(nextFocus.main, nextFocus.sub) : '--';
+            routineCurrentItemEl.textContent = `下一个：${nextLabel}`;
+        } else {
+            routineCurrentItemEl.textContent = formatFocusLabel(item.main, item.sub);
+        }
+    }
+}
+
+function routineUpdateProgressActive() {
+    if (!Array.isArray(routine.segments) || routine.segments.length === 0) return;
+    routine.segments.forEach((seg, idx) => {
+        if (!seg) return;
+        seg.classList.toggle('active', idx === routine.index);
+        seg.classList.toggle('done', idx < routine.index);
+    });
+}
+
+function routineSetStatusText(stateText, subtitleText) {
+    if (routineStateEl) routineStateEl.textContent = stateText || '';
+    if (routineCurrentItemEl) routineCurrentItemEl.textContent = subtitleText || '';
+}
+
+function routineShowCompletionBar() {
+    if (Array.isArray(routine.segments) && routine.segments.length > 0) {
+        routine.segments.forEach((seg) => {
+            if (!seg) return;
+            seg.classList.remove('active');
+            seg.classList.add('done');
+        });
+    }
+    routineSetStatusText('ROUTINE已完成', '');
+    routineShowStatusBar(null);
+}
+
+function routineBuildItemsFromUI() {
     const rows = routineItemsList.querySelectorAll('.routine-item-row');
     const items = [];
-    let totalTime = 0;
 
-    rows.forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        // inputs[0] is duration, inputs[1] is rest
-        // Note: Check if they are 'num' class or by index.
-        // Based on our addRoutineItem: 
-        // div children: mainSelect, subSelect, durationInput, restInput, delBtn
-
-        // Selects
+    rows.forEach((row) => {
         const selects = row.querySelectorAll('select');
-        const main = selects[0].value;
-        const sub = selects[1].value;
+        const main = selects[0]?.value || '未分类';
+        const sub = selects[1]?.value || '默认';
 
-        // Inputs
-        const durationInput = row.querySelector('input:nth-of-type(1)'); // Duration
-        const restInput = row.querySelector('input:nth-of-type(2)'); // Rest
+        const durationInput = row.querySelector('input:nth-of-type(1)');
+        const restInput = row.querySelector('input:nth-of-type(2)');
 
-        const duration = parseInt(durationInput.value) || 0;
-        const rest = parseInt(restInput.value) || 0;
+        const duration = parseInt(durationInput?.value, 10) || 0;
+        const rest = parseInt(restInput?.value, 10) || 0;
 
         if (duration > 0) {
-            items.push({ type: 'focus', duration, main, sub });
-            totalTime += duration;
-        }
-        if (rest > 0) {
-            items.push({ type: 'rest', duration: rest });
-            totalTime += rest;
+            items.push({ type: 'focus', durationMin: duration, main, sub });
+            if (rest > 0) items.push({ type: 'rest', durationMin: rest });
         }
     });
 
+    // No final rest after the last focus segment.
+    while (items.length > 0 && items[items.length - 1]?.type === 'rest') {
+        items.pop();
+    }
+
+    return items;
+}
+
+function routineRenderProgress(items) {
+    if (!routineProgressTrack) return;
+    routineProgressTrack.innerHTML = '';
+    routine.segments = [];
+
+    const total = items.reduce((sum, it) => sum + (it.durationMin || 0), 0) || 1;
+    items.forEach((item) => {
+        const seg = document.createElement('div');
+        seg.className = `routine-progress-segment ${item.type}`;
+        const pct = ((item.durationMin || 0) / total) * 100;
+        seg.style.width = `${pct}%`;
+        const titleBase = item.type === 'rest' ? '休息' : `${item.main} - ${item.sub}`;
+        seg.title = `${titleBase} (${item.durationMin}分)`;
+        routineProgressTrack.appendChild(seg);
+        routine.segments.push(seg);
+    });
+}
+
+function routineResetSegmentCounters() {
+    sessionActiveTotalSeconds = 0;
+    pauseCount = 0;
+    sessionDuration = 0;
+    lastSavedSessionDuration = 0;
+    isPaused = false;
+    isFinishing = false;
+}
+
+function routineEnterSegment(index) {
+    routine.index = index;
+    const item = routineCurrentItem();
+    if (!item) return;
+
+    document.body.classList.add('routine-running');
+    syncResetBtnForRoutine();
+
+    routineUpdateStatusBar();
+    routineUpdateProgressActive();
+
+    routineResetSegmentCounters();
+    focusStartTimestamp = Date.now();
+    sessionStartTimestamp = focusStartTimestamp;
+
+    seconds = Math.max(0, (item.durationMin || 0) * 60);
+    updateTimerDisplay();
+
+    if (item.type === 'rest') {
+        routineShowStatusBar(null); // Rest: keep visible
+        routineApplyMainVisualState('rest');
+        currentSessionId = null;
+        routineShowRestUI();
+        // Rest countdown entry animation (no typography overrides).
+        timerBox.classList.remove('rest-entry');
+        void timerBox.offsetWidth;
+        timerBox.classList.add('rest-entry');
+        setTimeout(() => timerBox.classList.remove('rest-entry'), 700);
+        btnText.textContent = '暂停休息';
+        mainBtn.classList.remove('paused');
+    } else {
+        routineShowStatusBar(5000); // Focus: show briefly, then hide
+        routineApplyMainVisualState('focus');
+        routineHideRestUI();
+        timerBox.classList.remove('rest-entry');
+        // Keep the picker hidden during focus (even though we're still in countdown mode)
+        if (countdownPicker) countdownPicker.classList.add('hidden');
+        // Apply category for this segment
+        try {
+            mainCat.value = item.main || '未分类';
+            subCat.value = item.sub || '默认';
+        } catch { }
+
+        currentSessionId = generateSessionId();
+        btnText.textContent = '暂停专注';
+        mainBtn.classList.remove('paused');
+        document.body.classList.remove('is-paused');
+    }
+
+    pushDataToMini();
+}
+
+function routinePlayFocusSummaryThen(nextFn) {
+    if (routine.isTransitioning) return;
+    routine.isTransitioning = true;
+    routineClearTransitionTimers();
+
+    // Match the normal auto-finish behavior: bring main window to front when a focus segment ends.
+    try {
+        if (
+            window.pywebview &&
+            window.pywebview.api &&
+            typeof window.pywebview.api.bring_main_to_front === 'function'
+        ) {
+            window.pywebview.api.bring_main_to_front();
+        }
+    } catch { }
+
+    // Once focus ends, immediately exit focus visuals (summary and rest should not look like focusing).
+    routineApplyMainVisualState('rest');
+
+    // Pop the ROUTINE bar back up and show what's next.
+    routineShowStatusBar(null);
+    const nextItem = routine.items[routine.index + 1] || null;
+    if (nextItem && nextItem.type === 'rest') {
+        routineSetStatusText('专注完成', `即将进入休息（${nextItem.durationMin || 0}分）`);
+    } else if (nextItem && nextItem.type === 'focus') {
+        const m = (nextItem.main || '未分类').toString().trim() || '未分类';
+        const s = (nextItem.sub || '默认').toString().trim() || '默认';
+        const label = (!s || s === '默认') ? m : `${m} - ${s}`;
+        routineSetStatusText('专注完成', `即将进入：${label}`);
+    } else {
+        routineSetStatusText('专注完成', 'ROUTINE已完成');
+    }
+
+    // Show "专注完成" with animation only (no typography overrides), and keep summary duration consistent.
+    timerBox.style.opacity = '';
+    timerBox.style.transform = '';
+    timerBox.style.filter = '';
+    timerBox.style.transition = '';
+    timerBox.classList.remove('finished');
+
+    timerBox.textContent = '专注完成';
+    // Hide mode switch icon during the finish summary (consistent with normal finish flow).
+    try {
+        if (modeIconTrigger) modeIconTrigger.classList.add('force-hidden');
+    } catch { }
+    // Restart the CSS keyframe animation if we just finished a previous segment.
+    void timerBox.offsetWidth;
+    timerBox.classList.add('finished');
+    showFinishSummary();
+
+    routineTransitionTimeout = setTimeout(() => {
+        hideFinishSummary();
+        timerBox.classList.remove('finished');
+        try {
+            if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
+        } catch { }
+        routine.isTransitioning = false;
+        nextFn();
+    }, ROUTINE_FOCUS_SUMMARY_MS);
+}
+
+function routineAdvanceToNextSegment() {
+    routine.index += 1;
+    if (!routine.items[routine.index]) {
+        routineStop('done');
+        return;
+    }
+    routineEnterSegment(routine.index);
+}
+
+function routineStop(reason = 'manual') {
+    // Stop any pending UI transitions first.
+    routineClearTransitionTimers();
+    routine.isTransitioning = false;
+
+    // Best-effort flush + save if we are in a focus segment.
+    try {
+        if (isFocusing && !isPaused) updateTimerLogic(false);
+    } catch { }
+
+    const wasRest = routineIsRest();
+    const item = routineCurrentItem();
+    if (item && item.type === 'focus' && !wasRest) {
+        try {
+            saveSessionToDB('end');
+        } catch { }
+    }
+
+    const shouldShowCompletion = reason === 'done';
+
+    // Ensure downstream UI (mini window, tick logic) treats ROUTINE as inactive immediately.
+    // (resetEverything() calls pushDataToMini() internally)
+    routine.active = false;
+    document.body.classList.remove('routine-running');
+    syncResetBtnForRoutine();
+    if (resetBtn) resetBtn.classList.remove('confirming');
+    if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
+
+    // Stop loops and reset the main UI to idle without double-saving.
+    resetEverything(false);
+    routineHideRestUI();
+    pushDataToMini();
+
+    // Update / hide status bar after reset.
+    if (shouldShowCompletion) {
+        routineShowCompletionBar();
+    } else {
+        routineHideStatusBar();
+    }
+
+    routine.items = [];
+    routine.index = 0;
+    routine.segments = [];
+}
+
+startRoutineBtn.onclick = () => {
+    if (isFocusing && !routine.active) {
+        alert('请先结束当前计时，再开始 ROUTINE。');
+        return;
+    }
+
+    if (routine.active) {
+        routineStop('manual');
+    }
+
+    const items = routineBuildItemsFromUI();
     if (items.length === 0) {
         alert('请添加至少一个有效的专注步骤');
         return;
     }
 
-    // 2. Build Progress Bar
-    routineProgressTrack.innerHTML = '';
-    items.forEach(item => {
-        const seg = document.createElement('div');
-        seg.className = `routine-progress-segment ${item.type}`;
-        // Calculate width percentage
-        const pct = (item.duration / totalTime) * 100;
-        seg.style.width = `${pct}%`;
+    // Force countdown mode for ROUTINE
+    modeControl.value = 'countdown';
 
-        // Tooltip
-        let title = item.type === 'focus' ? `${item.main} - ${item.sub}` : '休息';
-        title += ` (${item.duration}分)`;
-        seg.title = title;
+    // Render Progress Bar
+    routineRenderProgress(items);
 
-        routineProgressTrack.appendChild(seg);
-    });
-
-    // 3. Show Status Bar & Close Overlay
+    // Show Status Bar & Close Overlay
     routineOverlay.classList.remove('active');
-    setTimeout(() => {
-        routineStatusBar.classList.add('active');
 
-        // Activate first segment
-        const firstSeg = routineProgressTrack.querySelector('.routine-progress-segment');
-        if (firstSeg) firstSeg.classList.add('active');
+    routine.active = true;
+    routine.items = items;
+    routine.index = 0;
+    routine.isTransitioning = false;
+    document.body.classList.add('routine-running');
+    syncResetBtnForRoutine();
 
-        // Set Current Item Name
-        // Set Current Item Name
-        const currentItemEl = document.getElementById('routine-current-item');
-
-        try {
-            if (!currentItemEl) {
-                console.error("Routine label element not found!");
-            }
-
-            if (items.length > 0) {
-                const firstItem = items[0];
-                console.log("First Item:", firstItem);
-
-                if (firstItem.type === 'focus') {
-                    // Update content
-                    const text = `${firstItem.main} - ${firstItem.sub}`;
-                    currentItemEl.textContent = text;
-                    currentItemEl.innerText = text; // Try both
-                } else {
-                    currentItemEl.textContent = '休息';
-                }
-            } else {
-                console.error("Items array is empty in timeout!");
-            }
-        } catch (e) {
-            console.error("Error setting routine text:", e);
-        }
-
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            routineStatusBar.classList.remove('active');
-        }, 3000);
-    }, 300);
+    // Initialize first segment and start timer loops.
+    routineEnterSegment(0);
+    startTimer();
 };
 
 // Initialize all dropdowns
@@ -458,6 +758,7 @@ const LOCAL_TZ_KEY = 'timezone';
 const timerBox = document.getElementById('timer-box');
 const mainBtn = document.getElementById('main-focus-btn');
 const resetBtn = document.getElementById('reset-btn');
+const resetConfirmTextEl = resetBtn ? resetBtn.querySelector('.confirm-text') : null;
 const btnText = mainBtn.querySelector('.btn-text');
 const dailyTimeDisplay = document.getElementById('daily-time');
 const minsInput = document.getElementById('minutes-input');
@@ -1604,8 +1905,10 @@ function startTimer() {
     if (seconds === 0 && mode === 'stopwatch') {
         seconds = 0;
     } else if (mode === 'countdown' && !timer) {
-        // If first start of countdown
-        seconds = minsInput.value * 60;
+        // If first start of countdown (ROUTINE may pre-seed `seconds`)
+        if (!routine.active || !seconds) {
+            seconds = minsInput.value * 60;
+        }
     }
 
     // Clear any pending revert timeouts from previous finishes
@@ -1643,7 +1946,7 @@ function startTimer() {
 let finishRevertTimeout;
 
 function updateTimerLogic(allowAutoFinish = true) {
-    if (!isFocusing || isPaused || isFinishing) return;
+    if (!isFocusing || isPaused || isFinishing || routine.isTransitioning) return;
 
     const now = Date.now();
 
@@ -1666,11 +1969,16 @@ function updateTimerLogic(allowAutoFinish = true) {
         if (mode === 'countdown' && seconds < 0) seconds = 0;
 
         sessionDuration = newSessionDuration;
-        sessionActiveTotalSeconds += diff;
-        dailyTotalSeconds += diff;
+
+        // In ROUTINE rest segments, we do not count time into focus score or daily totals.
+        const isRoutineRest = routine.active && routineIsRest();
+        if (!isRoutineRest) {
+            sessionActiveTotalSeconds += diff;
+            dailyTotalSeconds += diff;
+        }
 
         updateTimerDisplay();
-        updateDailyDisplay();
+        if (!isRoutineRest) updateDailyDisplay();
         pushDataToMini();
         updateGoalsDisplay();
 
@@ -1678,6 +1986,19 @@ function updateTimerLogic(allowAutoFinish = true) {
             seconds = 0;
             updateTimerDisplay();
             pushDataToMini();
+            if (routine.active) {
+                // ROUTINE: focus -> short summary -> rest countdown (or next segment)
+                if (routine.isTransitioning) return;
+                const item = routineCurrentItem();
+                if (item && item.type === 'focus') {
+                    saveSessionToDB('end');
+                    routinePlayFocusSummaryThen(() => routineAdvanceToNextSegment());
+                    return;
+                }
+                routineAdvanceToNextSegment();
+                return;
+            }
+
             if (allowAutoFinish) {
                 finishTimer();
                 return;
@@ -1699,13 +2020,19 @@ window.pythonTick = function () {
 
 function pauseTimer() {
     updateTimerLogic(); // Flush latest seconds before saving
-    pauseCount += 1;
+    if (!(routine.active && routineIsRest())) pauseCount += 1;
     isPaused = true;
-    saveSessionToDB('pause'); // Save the current segment before pausing
-    lastSavedSessionDuration = 0; // Reset local accumulator for the next segment
+    if (!(routine.active && routineIsRest())) saveSessionToDB('pause'); // Save the current segment before pausing
+    if (routine.active && routineIsRest()) {
+        // For rest segments we don't persist, so keep the accumulator to avoid a "frozen" timer on resume.
+        lastSavedSessionDuration = sessionDuration;
+    } else {
+        // Focus segments are persisted on pause; reset accumulator for the next segment.
+        lastSavedSessionDuration = 0;
+    }
     document.body.classList.add('is-paused');
     mainBtn.classList.add('paused');
-    btnText.textContent = '继续专注';
+    btnText.textContent = routine.active && routineIsRest() ? '继续休息' : '继续专注';
     pushDataToMini();
     updateGoalsDisplay(true); // Immediate UI refresh to show new totals
 }
@@ -1715,7 +2042,7 @@ function resumeTimer() {
     focusStartTimestamp = Date.now(); // Reset start time for the current segment
     document.body.classList.remove('is-paused');
     mainBtn.classList.remove('paused');
-    btnText.textContent = '暂停专注';
+    btnText.textContent = routine.active && routineIsRest() ? '暂停休息' : '暂停专注';
     pushDataToMini();
 }
 
@@ -1861,6 +2188,11 @@ function resetEverything(shouldSave = true, preserveText = false) {
 }
 
 function saveSessionToDB(reason = null) {
+    // ROUTINE rest segments are display-only and should never be persisted.
+    if (routine.active && routineIsRest()) {
+        sessionDuration = 0;
+        return;
+    }
     if (!window.pywebview || !window.pywebview.api || !currentSessionId) {
         sessionDuration = 0;
         return;
@@ -2362,10 +2694,11 @@ function updateDailyDisplay() {
 
 function pushDataToMini() {
     if (window.pywebview && window.pywebview.api) {
+        const isRoutineRest = routine.active && routineIsRest();
         const data = {
             time: timerBox.textContent,
-            mainCat: selectedMainCat || "未分类",
-            subCat: subCat.value || "默认",
+            mainCat: isRoutineRest ? '休息中' : (selectedMainCat || "未分类"),
+            subCat: isRoutineRest ? '默认' : (subCat.value || "默认"),
             isPaused: isPaused || !isFocusing,
             isFinished: timerBox.classList.contains('finished'),
             mode: mode,
@@ -2385,6 +2718,7 @@ toggleMiniBtn.onclick = () => {
 };
 
 mainBtn.onclick = () => {
+    if (routine.isTransitioning) return;
     if (!isFocusing) {
         startTimer();
     } else {
@@ -2398,13 +2732,28 @@ mainBtn.onclick = () => {
 
 let resetConfirmTimeout;
 
+function syncResetBtnForRoutine() {
+    if (!resetBtn) return;
+    if (routine.active) {
+        resetBtn.title = '结束ROUTINE';
+        if (resetConfirmTextEl) resetConfirmTextEl.textContent = '结束ROUTINE?';
+    } else {
+        resetBtn.title = '完成专注并记录';
+        if (resetConfirmTextEl) resetConfirmTextEl.textContent = '确定结束?';
+    }
+}
+
 resetBtn.onclick = () => {
     if (!isFocusing) return;
 
     // Check if already in confirming state
     if (resetBtn.classList.contains('confirming')) {
         // Confirmed!
-        finishTimer(false);
+        if (routine.active) {
+            routineStop('manual');
+        } else {
+            finishTimer(false);
+        }
         clearTimeout(resetConfirmTimeout);
         resetBtn.classList.remove('confirming');
     } else {
