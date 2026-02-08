@@ -23,6 +23,7 @@ let routineTransitionTimeout = null;
 let routineFadeTimeout = null;
 let routineBarAutoHideTimeout = null;
 let routineBarDelayTimeout = null;
+let routineBarPauseToggleTimeout = null;
 let routineIntroTimeout = null;
 
 const routine = {
@@ -369,10 +370,12 @@ function routineClearTransitionTimers() {
     if (routineFadeTimeout) clearTimeout(routineFadeTimeout);
     if (routineBarDelayTimeout) clearTimeout(routineBarDelayTimeout);
     if (routineIntroTimeout) clearTimeout(routineIntroTimeout);
+    if (routineBarPauseToggleTimeout) clearTimeout(routineBarPauseToggleTimeout);
     routineTransitionTimeout = null;
     routineFadeTimeout = null;
     routineBarDelayTimeout = null;
     routineIntroTimeout = null;
+    routineBarPauseToggleTimeout = null;
 }
 
 function routineClearBarTimer() {
@@ -396,6 +399,26 @@ function routineHideStatusBar() {
     if (!routineStatusBar) return;
     routineClearBarTimer();
     routineStatusBar.classList.remove('active');
+}
+
+function routineScheduleStatusBarForFocusPause(shouldShow, expectedPaused) {
+    if (!routine.active || !routineStatusBar) return;
+    const item = routineCurrentItem();
+    if (!item || item.type !== 'focus') return;
+    if (routine.isTransitioning) return;
+
+    if (routineBarPauseToggleTimeout) clearTimeout(routineBarPauseToggleTimeout);
+    routineBarPauseToggleTimeout = setTimeout(() => {
+        routineBarPauseToggleTimeout = null;
+        if (!routine.active || !routineStatusBar) return;
+        const cur = routineCurrentItem();
+        if (!cur || cur.type !== 'focus') return;
+        if (routine.isTransitioning) return;
+        if (isPaused !== expectedPaused) return;
+
+        if (shouldShow) routineShowStatusBar(null);
+        else routineHideStatusBar();
+    }, ROUTINE_BAR_SHOW_DELAY_MS);
 }
 
 function routineApplyMainVisualState(kind) {
@@ -547,6 +570,12 @@ function routineEnterSegment(index) {
     routine.index = index;
     const item = routineCurrentItem();
     if (!item) return;
+
+    // Cancel any pause/resume-driven visibility toggles when switching segments.
+    if (routineBarPauseToggleTimeout) {
+        clearTimeout(routineBarPauseToggleTimeout);
+        routineBarPauseToggleTimeout = null;
+    }
 
     document.body.classList.add('routine-running');
     syncResetBtnForRoutine();
@@ -1330,6 +1359,9 @@ async function updateGoalsDisplay(forceFetch = false) {
     if (mainGoalMins === 0 && (subGoalMins === 0 || sCat === '默认')) {
         goalsDisplay.innerHTML = '';
         goalBaseStats.lastFetch = 0;
+        // Even if the current category has no goal, the global "今日目标进度" section
+        // should still reflect goals from other categories.
+        await updateTodayGoalsView(forceFetch);
         return;
     }
 
@@ -2171,6 +2203,11 @@ function pauseTimer() {
     btnText.textContent = routine.active && routineIsRest() ? '继续休息' : '继续专注';
     pushDataToMini();
     updateGoalsDisplay(true); // Immediate UI refresh to show new totals
+
+    // ROUTINE: while in a focus segment, show the floating status bar after a short delay when pausing.
+    if (routine.active && !routineIsRest()) {
+        routineScheduleStatusBarForFocusPause(true, true);
+    }
 }
 
 function resumeTimer() {
@@ -2180,6 +2217,11 @@ function resumeTimer() {
     mainBtn.classList.remove('paused');
     btnText.textContent = routine.active && routineIsRest() ? '暂停休息' : '暂停专注';
     pushDataToMini();
+
+    // ROUTINE: while in a focus segment, hide the floating status bar after a short delay when resuming.
+    if (routine.active && !routineIsRest()) {
+        routineScheduleStatusBarForFocusPause(false, false);
+    }
 }
 
 function finishTimer(isAuto = true) {
