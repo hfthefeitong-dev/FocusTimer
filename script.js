@@ -2701,7 +2701,9 @@ async function updatePieChart(timeRange, drill) {
     const pieData = await window.pywebview.api.get_pie_stats(statMainFilter.value || null, timeRange, drill);
 
     const labels = pieData.map(d => d.label);
-    const totals = pieData.map(d => Number((d.total / 60).toFixed(2)));
+    const rawHours = pieData.map(d => (Number(d.total || 0) / 3600));
+    // Keep raw values for the chart so tiny totals (e.g. 10s = 0.0028h) don't round to 0 and disappear.
+    const totals = rawHours;
 
     const ctxPie = document.getElementById('focus-pie-chart').getContext('2d');
     if (focusPieChart) focusPieChart.destroy();
@@ -2734,9 +2736,20 @@ async function updatePieChart(timeRange, drill) {
                 },
                 title: {
                     display: true,
-                    text: statMainFilter.value ? '子学科分布' : '大类分布',
+                    text: (statMainFilter.value ? '子学科分布' : '大类分布') + ' (小时)',
                     color: '#fff',
                     font: { size: 14 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const label = context.label || '';
+                            const hoursRaw = Number(rawHours?.[context.dataIndex] ?? context.parsed ?? context.raw ?? 0);
+                            const hoursShown = hoursRaw > 0 && hoursRaw < 0.01 ? 0.01 : hoursRaw;
+                            const formatted = hoursShown.toFixed(2);
+                            return `${label}: ${formatted} 小时`;
+                        }
+                    }
                 }
             },
             cutout: '60%' // Doughnut hole size
