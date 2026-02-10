@@ -2988,3 +2988,85 @@ window.toggleFocusFromHotkey = () => {
 };
 
 // Background movement logic removed in favor of CSS animations
+
+// Routine Total Duration Logic
+const routineTotalTimeDisplay = document.getElementById('routine-total-time-display');
+const routineFocusTimeDisplay = document.getElementById('routine-focus-time-display');
+
+function calculateRoutineStats() {
+    const rows = routineItemsList.querySelectorAll('.routine-item-row');
+    let totalMinutes = 0;
+    let focusMinutes = 0;
+
+    rows.forEach((row, index) => {
+        const durationInput = row.querySelector('input:nth-of-type(1)');
+        const restInput = row.querySelector('input:nth-of-type(2)');
+
+        const duration = parseInt(durationInput?.value, 10) || 0;
+        const rest = parseInt(restInput?.value, 10) || 0;
+
+        focusMinutes += duration;
+        totalMinutes += duration;
+
+        // Add rest time only if it's NOT the last item
+        if (index < rows.length - 1) {
+            totalMinutes += rest;
+        }
+    });
+
+    return { total: totalMinutes, focus: focusMinutes };
+}
+
+function formatDuration(minutes) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    let text = '';
+    if (h > 0) text += `${h}小时`;
+    if (m > 0 || minutes === 0) text += `${m}分钟`;
+    return text;
+}
+
+function updateRoutineTotalDisplay() {
+    const stats = calculateRoutineStats();
+
+    if (routineTotalTimeDisplay) {
+        routineTotalTimeDisplay.textContent = formatDuration(stats.total);
+    }
+    if (routineFocusTimeDisplay) {
+        routineFocusTimeDisplay.textContent = formatDuration(stats.focus);
+    }
+}
+
+// Hook into routine item changes
+let originalAddRoutineItemFn = addRoutineItem;
+addRoutineItem = function (main, sub, duration, rest) {
+    originalAddRoutineItemFn(main, sub, duration, rest);
+    // The new item is the last child
+    const newRow = routineItemsList.lastElementChild;
+    if (newRow) {
+        const inputs = newRow.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('input', updateRoutineTotalDisplay);
+        });
+
+        // The delete button is the last child of the row
+        const delBtn = newRow.querySelector('.icon-btn.danger');
+        if (delBtn) {
+            const originalOnclick = delBtn.onclick;
+            delBtn.onclick = () => {
+                // Execute original logic (removal)
+                if (originalOnclick) originalOnclick();
+                // Then update stats
+                updateRoutineTotalDisplay();
+            }
+        }
+    }
+    updateRoutineTotalDisplay();
+};
+
+// Initial update when opening routine
+const originalOpenRoutineBtnOnClick = openRoutineBtn.onclick;
+openRoutineBtn.onclick = () => {
+    if (originalOpenRoutineBtnOnClick) originalOpenRoutineBtnOnClick();
+    updateRoutineTotalDisplay();
+};

@@ -2299,3 +2299,22 @@ body.is-focusing {
 .routine-status-bar.completed .routine-progress-segment.active {
     animation: none;
 }
+
+/* Routine Total Stats */
+.routine-total-stats {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.2rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    border-top: 1px dashed var(--glass-border);
+}
+
+.routine-total-stats .value {
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 1rem;
+}
