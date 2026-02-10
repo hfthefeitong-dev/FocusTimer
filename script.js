@@ -597,6 +597,10 @@ function routineEnterSegment(index) {
         routineApplyMainVisualState('rest');
         currentSessionId = null;
         routineShowRestUI();
+        // Refresh goal progress immediately: during ROUTINE rest we stop adding live session time,
+        // so we must re-fetch today's persisted stats to avoid showing a lower "done" time.
+        goalBaseStats.lastFetch = 0;
+        void updateGoalsDisplay(true);
         // Rest countdown entry animation (no typography overrides).
         timerBox.classList.remove('rest-entry');
         void timerBox.offsetWidth;
