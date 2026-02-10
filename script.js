@@ -631,6 +631,10 @@ function routineEnterSegment(index) {
             mainCat.value = item.main || '未分类';
             subCat.value = item.sub || '默认';
         } catch { }
+        goalBaseStats.lastFetch = 0;
+        goalBaseStats.scopeMain = '';
+        goalBaseStats.scopeSub = '';
+        void updateGoalsDisplay(true);
 
         currentSessionId = generateSessionId();
         btnText.textContent = '暂停专注';
@@ -1163,7 +1167,15 @@ goalsDisplay.onclick = (e) => {
     }
 };
 
-let goalBaseStats = { main: 0, sub: 0, allTodayDetailed: [], lastFetch: 0 };
+let goalBaseStats = {
+    main: 0,
+    sub: 0,
+    allTodayDetailed: [],
+    lastFetch: 0,
+    allLastFetch: 0,
+    scopeMain: '',
+    scopeSub: ''
+};
 
 function getSubGoalNamesInOrder(config) {
     const subGoals = (config && config.subGoals) ? config.subGoals : {};
@@ -1231,10 +1243,10 @@ async function updateTodayGoalsView(forceFetch = false) {
     container.style.display = 'block';
 
     const now = Date.now();
-    if (now - goalBaseStats.lastFetch > 30000 || forceFetch || !isFocusing) {
+    if (now - goalBaseStats.allLastFetch > 30000 || forceFetch || !isFocusing) {
         const allStats = await window.pywebview.api.get_all_today_stats();
         goalBaseStats.allTodayDetailed = allStats;
-        goalBaseStats.lastFetch = now;
+        goalBaseStats.allLastFetch = now;
     }
 
     // 1. Calculate stats for all goals first
@@ -1363,6 +1375,8 @@ async function updateGoalsDisplay(forceFetch = false) {
     if (mainGoalMins === 0 && (subGoalMins === 0 || sCat === '默认')) {
         goalsDisplay.innerHTML = '';
         goalBaseStats.lastFetch = 0;
+        goalBaseStats.scopeMain = '';
+        goalBaseStats.scopeSub = '';
         // Even if the current category has no goal, the global "今日目标进度" section
         // should still reflect goals from other categories.
         await updateTodayGoalsView(forceFetch);
@@ -1370,7 +1384,8 @@ async function updateGoalsDisplay(forceFetch = false) {
     }
 
     const now = Date.now();
-    if (now - goalBaseStats.lastFetch > 30000 || forceFetch || !isFocusing) {
+    const scopeChanged = goalBaseStats.scopeMain !== mCat || goalBaseStats.scopeSub !== sCat;
+    if (now - goalBaseStats.lastFetch > 30000 || forceFetch || !isFocusing || scopeChanged) {
         const todayStats = await window.pywebview.api.get_pie_stats(null, 'today');
         const todaySubStats = await window.pywebview.api.get_pie_stats(mCat, 'today');
         let mDone = 0;
@@ -1381,7 +1396,11 @@ async function updateGoalsDisplay(forceFetch = false) {
         todaySubStats.forEach(d => {
             if (d.label === sCat) sDone += d.total;
         });
-        goalBaseStats = { main: mDone, sub: sDone, lastFetch: now };
+        goalBaseStats.main = mDone;
+        goalBaseStats.sub = sDone;
+        goalBaseStats.lastFetch = now;
+        goalBaseStats.scopeMain = mCat;
+        goalBaseStats.scopeSub = sCat;
     }
 
     const shouldCountLiveSession = isFocusing && !(routine.active && routineIsRest());
