@@ -732,21 +732,8 @@ function routinePlayFocusSummaryThen(nextFn) {
 
             resetEverything(false, true);
 
-            // Best-effort resync today's total from DB (ROUTINE rest/summary should not affect it).
-            if (
-                window.pywebview &&
-                window.pywebview.api &&
-                typeof window.pywebview.api.get_today_total === 'function'
-            ) {
-                try {
-                    window.pywebview.api.get_today_total().then((secs) => {
-                        const v = parseInt(secs, 10);
-                        if (!Number.isFinite(v)) return;
-                        dailyTotalSeconds = v;
-                        updateDailyDisplay();
-                    });
-                } catch { }
-            }
+            // Best-effort resync today's total from DB (avoid rollback if DB is slightly behind).
+            safeResyncTodayTotalFromDB(dailyTotalSeconds);
         }
 
         routineTransitionTimeout = setTimeout(() => {
@@ -804,6 +791,109 @@ function routineAdvanceToNextSegment() {
     routineEnterSegment(routine.index);
 }
 
+function routineEndEarlyWithTransition() {
+    if (!routine.active) return;
+    if (isFinishing) return;
+    if (routine.isTransitioning) return;
+
+    // Stop any pending ROUTINE UI transitions first.
+    routineClearTransitionTimers();
+
+    // Best-effort flush + save if we are in a focus segment.
+    const wasRest = routineIsRest();
+    try {
+        if (isFocusing && !isPaused && !wasRest) {
+            // Flush time without triggering ROUTINE segment transitions.
+            const prevRoutineActive = routine.active;
+            routine.active = false;
+            try {
+                updateTimerLogic(false);
+            } finally {
+                routine.active = prevRoutineActive;
+            }
+        }
+    } catch { }
+
+    const item = routineCurrentItem();
+    if (item && item.type === 'focus' && !wasRest) {
+        try { saveSessionToDB('end'); } catch { }
+    }
+
+    routine.isTransitioning = true;
+
+    // Stop timer loops immediately to avoid extra ticks during the finish animation.
+    isFinishing = true;
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+    if (window.pywebview && window.pywebview.api) {
+        try { window.pywebview.api.stop_heartbeat(); } catch { }
+    }
+
+    // Tear down ROUTINE state (but keep the main timer visuals for the transition).
+    routine.active = false;
+    document.body.classList.remove('routine-running');
+    syncResetBtnForRoutine();
+    if (resetBtn) resetBtn.classList.remove('confirming');
+    if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
+    if (routineStatusBar) routineStatusBar.classList.remove('completed');
+    routineSetTitle(ROUTINE_TITLE_DEFAULT);
+    routineHideStatusBar();
+    routineHideRestUI();
+    routine.items = [];
+    routine.index = 0;
+    routine.segments = [];
+
+    // Resync today's total from DB (avoid rollback if DB is slightly behind).
+    safeResyncTodayTotalFromDB(dailyTotalSeconds);
+
+    // Match non-ROUTINE finish animation (except the ROUTINE status bar).
+    timerBox.style.opacity = '0';
+    timerBox.style.transform = 'scale(0.95)';
+    timerBox.style.filter = 'blur(10px)';
+    timerBox.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    setTimeout(() => {
+        timerBox.textContent = '专注完成';
+        timerBox.classList.add('finished');
+        try {
+            if (modeIconTrigger) modeIconTrigger.classList.add('force-hidden');
+        } catch { }
+        timerBox.style.opacity = '';
+        timerBox.style.transform = '';
+        timerBox.style.filter = '';
+
+        // Reset the app back to idle while keeping the "专注完成" text on screen.
+        resetEverything(false, true);
+        showFinishSummary();
+
+        // Revert back to time after the same duration as non-ROUTINE.
+        if (finishRevertTimeout) clearTimeout(finishRevertTimeout);
+        finishRevertTimeout = setTimeout(() => {
+            // Remove finished animation fill before fading out to avoid it overriding transitions.
+            timerBox.classList.remove('finished');
+
+            timerBox.style.opacity = '0';
+            timerBox.style.filter = 'blur(10px)';
+            timerBox.style.transform = 'scale(0.95)';
+
+            setTimeout(() => {
+                hideFinishSummary();
+                try {
+                    if (modeIconTrigger) modeIconTrigger.classList.remove('force-hidden');
+                } catch { }
+                resetTimerDisplay();
+                isFinishing = false;
+                routine.isTransitioning = false;
+                timerBox.style.opacity = '';
+                timerBox.style.filter = '';
+                timerBox.style.transform = '';
+            }, 600);
+        }, ROUTINE_FOCUS_SUMMARY_MS);
+    }, 500);
+}
+
 function routineStop(reason = 'manual') {
     // Stop any pending UI transitions first.
     routineClearTransitionTimers();
@@ -852,21 +942,8 @@ function routineStop(reason = 'manual') {
         routineHideStatusBar();
     }
 
-    // Resync today's total from DB (ROUTINE rest/summary should not affect it).
-    if (
-        window.pywebview &&
-        window.pywebview.api &&
-        typeof window.pywebview.api.get_today_total === 'function'
-    ) {
-        try {
-            window.pywebview.api.get_today_total().then((secs) => {
-                const v = parseInt(secs, 10);
-                if (!Number.isFinite(v)) return;
-                dailyTotalSeconds = v;
-                updateDailyDisplay();
-            });
-        } catch { }
-    }
+    // Resync today's total from DB (avoid rollback if DB is slightly behind).
+    safeResyncTodayTotalFromDB(dailyTotalSeconds);
 
     routine.items = [];
     routine.index = 0;
@@ -2946,6 +3023,29 @@ function updateDailyDisplay() {
     dailyTimeDisplay.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function safeResyncTodayTotalFromDB(minValue = null) {
+    const min = Number.isFinite(minValue) ? minValue : null;
+
+    if (
+        !window.pywebview ||
+        !window.pywebview.api ||
+        typeof window.pywebview.api.get_today_total !== 'function'
+    ) {
+        return;
+    }
+
+    try {
+        window.pywebview.api.get_today_total().then((secs) => {
+            const v = parseInt(secs, 10);
+            if (!Number.isFinite(v)) return;
+            // Avoid UI rollback if DB hasn't committed the last saved segment yet.
+            if (min !== null && v < min) return;
+            dailyTotalSeconds = v;
+            updateDailyDisplay();
+        }).catch(() => { });
+    } catch { }
+}
+
 function pushDataToMini() {
     if (window.pywebview && window.pywebview.api) {
         const isRoutineRest = routine.active && routineIsRest();
@@ -3004,7 +3104,7 @@ resetBtn.onclick = () => {
     if (resetBtn.classList.contains('confirming')) {
         // Confirmed!
         if (routine.active) {
-            routineStop('manual');
+            routineEndEarlyWithTransition();
         } else {
             finishTimer(false);
         }
