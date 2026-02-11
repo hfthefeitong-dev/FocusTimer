@@ -715,6 +715,40 @@ function routinePlayFocusSummaryThen(nextFn) {
         timerBox.classList.add('finished');
         showFinishSummary();
 
+        if (willFinishRoutine) {
+            // Match non-ROUTINE completion: stop loops and reset to idle immediately,
+            // while preserving the "专注完成" text until we revert it after the summary.
+            try {
+                routine.active = false;
+                document.body.classList.remove('routine-running');
+                syncResetBtnForRoutine();
+                if (resetBtn) resetBtn.classList.remove('confirming');
+                if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
+                routineHideRestUI();
+                routine.items = [];
+                routine.index = 0;
+                routine.segments = [];
+            } catch { }
+
+            resetEverything(false, true);
+
+            // Best-effort resync today's total from DB (ROUTINE rest/summary should not affect it).
+            if (
+                window.pywebview &&
+                window.pywebview.api &&
+                typeof window.pywebview.api.get_today_total === 'function'
+            ) {
+                try {
+                    window.pywebview.api.get_today_total().then((secs) => {
+                        const v = parseInt(secs, 10);
+                        if (!Number.isFinite(v)) return;
+                        dailyTotalSeconds = v;
+                        updateDailyDisplay();
+                    });
+                } catch { }
+            }
+        }
+
         routineTransitionTimeout = setTimeout(() => {
             // Match non-ROUTINE: fade out then revert to timer smoothly.
             timerBox.style.opacity = '0';
@@ -733,11 +767,17 @@ function routinePlayFocusSummaryThen(nextFn) {
                     routineHideStatusBar();
                 }
 
-                routine.isTransitioning = false;
-                nextFn();
+                if (willFinishRoutine) {
+                    // Mirror finishTimer(): revert back to default timer text after the fade.
+                    resetTimerDisplay();
+                    isFinishing = false;
+                    routine.isTransitioning = false;
+                } else {
+                    routine.isTransitioning = false;
+                    if (typeof nextFn === 'function') nextFn();
+                }
 
-                // Fade back in (new timer content will already be set by nextFn()).
-                // Be robust against nextFn() (e.g. resetEverything) modifying styles synchronously.
+                // Fade back in (new timer content will already be set by resetTimerDisplay()/nextFn()).
                 try {
                     const transition = timerBox.style.transition || 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
                     timerBox.style.transition = 'none';
@@ -2372,7 +2412,7 @@ function resetEverything(shouldSave = true, preserveText = false) {
         clearTimeout(finishRevertTimeout);
         finishRevertTimeout = null;
     }
-    // Reset styles
+    // Reset styles (but don't touch the completion UI if we are preserving "专注完成")
     timerBox.style.opacity = '';
     timerBox.style.filter = '';
     timerBox.style.transform = '';
