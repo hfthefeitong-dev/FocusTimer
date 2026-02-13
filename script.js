@@ -710,25 +710,27 @@ function routinePlayFocusSummaryThen(nextFn) {
             if (modeIconTrigger) modeIconTrigger.classList.add('force-hidden');
         } catch { }
 
-        // Restart the CSS keyframe animation if we just finished a previous segment.
-        void timerBox.offsetWidth;
-        timerBox.classList.add('finished');
-        showFinishSummary();
+         // Restart the CSS keyframe animation if we just finished a previous segment.
+         void timerBox.offsetWidth;
+         timerBox.classList.add('finished');
 
-        if (willFinishRoutine) {
+         // Ensure ROUTINE rest UI doesn't immediately hide/override the focus finish summary.
+         routineHideRestUI();
+         showFinishSummary();
+
+         if (willFinishRoutine) {
             // Match non-ROUTINE completion: stop loops and reset to idle immediately,
             // while preserving the "专注完成" text until we revert it after the summary.
             try {
                 routine.active = false;
-                document.body.classList.remove('routine-running');
-                syncResetBtnForRoutine();
-                if (resetBtn) resetBtn.classList.remove('confirming');
-                if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
-                routineHideRestUI();
-                routine.items = [];
-                routine.index = 0;
-                routine.segments = [];
-            } catch { }
+                 document.body.classList.remove('routine-running');
+                 syncResetBtnForRoutine();
+                 if (resetBtn) resetBtn.classList.remove('confirming');
+                 if (resetConfirmTimeout) clearTimeout(resetConfirmTimeout);
+                 routine.items = [];
+                 routine.index = 0;
+                 routine.segments = [];
+             } catch { }
 
             resetEverything(false, true);
 
