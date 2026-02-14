@@ -2746,10 +2746,12 @@ async function updateChart() {
             scales: {
                 y: {
                     beginAtZero: true,
+                    border: { display: false },
                     grid: { color: 'rgba(255,255,255,0.1)' },
                     ticks: { color: 'rgba(255,255,255,0.7)' }
                 },
                 x: {
+                    border: { display: false },
                     grid: { display: false },
                     ticks: { color: 'rgba(255,255,255,0.7)' }
                 }
@@ -2943,6 +2945,7 @@ async function updateDistributionChart(timeRange, drill) {
             scales: {
                 y: {
                     beginAtZero: true,
+                    border: { display: false },
                     grid: { color: 'rgba(255,255,255,0.05)' },
                     ticks: {
                         color: 'rgba(255,255,255,0.6)',
@@ -2950,6 +2953,7 @@ async function updateDistributionChart(timeRange, drill) {
                     }
                 },
                 x: {
+                    border: { display: false },
                     grid: { display: false },
                     ticks: {
                         color: 'rgba(255,255,255,0.6)',
