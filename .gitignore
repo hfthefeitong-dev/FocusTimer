@@ -4,3 +4,6 @@ settings.json
 
 # 本地数据库
 focus_data.db
+
+# 自定义背景资源
+custom_backgrounds/
