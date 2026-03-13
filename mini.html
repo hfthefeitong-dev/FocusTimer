@@ -261,6 +261,61 @@
             background: #000000;
         }
 
+        /* 13. Fluid Aura */
+        .mini-card.effect-fluid-aura {
+            background: #0a0a0f;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .mini-card.effect-fluid-aura::before,
+        .mini-card.effect-fluid-aura::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(30px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .mini-card.effect-fluid-aura::before {
+            width: 200px;
+            height: 200px;
+            background: rgba(99, 102, 241, 0.45);
+            top: -80px;
+            left: -80px;
+        }
+
+        .mini-card.effect-fluid-aura::after {
+            width: 180px;
+            height: 180px;
+            background: rgba(236, 72, 153, 0.4);
+            bottom: -80px;
+            right: -80px;
+        }
+
+        .mini-card.active.effect-fluid-aura::before {
+            animation: fluid-aura-float1 10s ease-in-out infinite alternate;
+        }
+
+        .mini-card.active.effect-fluid-aura::after {
+            animation: fluid-aura-float2 14s ease-in-out infinite alternate;
+        }
+
+        @keyframes fluid-aura-float1 {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(80px, 30px) scale(1.2); }
+            66% { transform: translate(40px, 80px) scale(0.9); }
+            100% { transform: translate(0px, 60px) scale(1.1); }
+        }
+
+        @keyframes fluid-aura-float2 {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(-60px, -40px) scale(1.3); }
+            66% { transform: translate(-20px, -80px) scale(0.8); }
+            100% { transform: translate(-50px, -20px) scale(1.1); }
+        }
+
         /* 12. Solid Colors */
         .mini-card.effect-solid-white {
             background: #ffffff;
@@ -723,6 +778,7 @@
             const effect = data.miniEffect || 'abstract';
             // Clear all effect classes
             card.classList.remove(
+                'effect-fluid-aura',
                 'effect-abstract',
                 'effect-breathing',
 
