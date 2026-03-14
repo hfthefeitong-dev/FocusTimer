@@ -209,6 +209,19 @@ const routineOverlay = document.getElementById('routine-overlay');
 const addRoutineItemBtn = document.getElementById('add-routine-item-btn');
 const routineItemsList = document.getElementById('routine-items-list');
 
+function bindOverlayBackdropClose(overlay) {
+    if (!overlay) return;
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+        }
+    });
+}
+
+bindOverlayBackdropClose(settingsOverlay);
+bindOverlayBackdropClose(statsOverlay);
+bindOverlayBackdropClose(routineOverlay);
+
 openRoutineBtn.onclick = () => {
     routineOverlay.classList.add('active');
     // Initialize with one item if empty
