@@ -234,7 +234,7 @@ closeRoutineBtn.onclick = () => {
     routineOverlay.classList.remove('active');
 };
 
-function addRoutineItem(main = null, sub = null, duration = 25, rest = 5) {
+function addRoutineItem(main = null, sub = null, duration = 60, rest = 10) {
     const div = document.createElement('div');
     div.className = 'routine-item-row';
 
