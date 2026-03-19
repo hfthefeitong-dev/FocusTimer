@@ -18,6 +18,8 @@ DB_PATH = 'focus_data.db'
 
 main_window = None
 mini_window = None
+MINI_WINDOW_WIDTH = 230
+MINI_WINDOW_HEIGHT = 100
 
 def _connect_db():
     """
@@ -244,6 +246,42 @@ def _get_window_pos_by_title(window_title):
     except Exception:
         return None
 
+def _get_virtual_screen_bounds():
+    """Returns the virtual desktop bounds as (left, top, right, bottom)."""
+    if os.name != 'nt':
+        return None
+
+    try:
+        user32 = ctypes.windll.user32
+        SM_XVIRTUALSCREEN = 76
+        SM_YVIRTUALSCREEN = 77
+        SM_CXVIRTUALSCREEN = 78
+        SM_CYVIRTUALSCREEN = 79
+
+        left = int(user32.GetSystemMetrics(SM_XVIRTUALSCREEN))
+        top = int(user32.GetSystemMetrics(SM_YVIRTUALSCREEN))
+        width = int(user32.GetSystemMetrics(SM_CXVIRTUALSCREEN))
+        height = int(user32.GetSystemMetrics(SM_CYVIRTUALSCREEN))
+        if width <= 0 or height <= 0:
+            return None
+        return left, top, left + width, top + height
+    except Exception:
+        return None
+
+def _clamp_mini_window_position(x, y):
+    """Keeps the mini window inside the current virtual desktop."""
+    bounds = _get_virtual_screen_bounds()
+    if not bounds:
+        return int(x), int(y), False
+
+    left, top, right, bottom = bounds
+    max_x = max(left, right - MINI_WINDOW_WIDTH)
+    max_y = max(top, bottom - MINI_WINDOW_HEIGHT)
+    clamped_x = min(max(int(x), left), max_x)
+    clamped_y = min(max(int(y), top), max_y)
+    changed = clamped_x != int(x) or clamped_y != int(y)
+    return clamped_x, clamped_y, changed
+
 def _move_window_by_title(window_title, x, y):
     """Moves a window to (x, y) without changing size or z-order (Windows only)."""
     if os.name != 'nt':
@@ -290,7 +328,14 @@ def _restore_mini_window_position():
     if not isinstance(x, int) or not isinstance(y, int):
         return False
 
-    return _move_window_by_title('Focus Mini', x, y)
+    x, y, changed = _clamp_mini_window_position(x, y)
+    moved = _move_window_by_title('Focus Mini', x, y)
+
+    if moved and changed:
+        settings['miniWindowPos'] = {'x': x, 'y': y}
+        _atomic_write_json(SETTINGS_FILE, settings)
+
+    return moved
 
 def init_db():
     conn = _connect_db()
@@ -1191,8 +1236,8 @@ class Api:
             mini_window = webview.create_window(
                 'Focus Mini',
                 url='mini.html',
-                width=230,
-                height=100,
+                width=MINI_WINDOW_WIDTH,
+                height=MINI_WINDOW_HEIGHT,
                 resizable=False,
                 on_top=True,
                 frameless=True,
