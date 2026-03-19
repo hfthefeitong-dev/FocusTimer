@@ -1,9 +1,13 @@
-# 本地配置文件
+# Local config files
 categories.json
 settings.json
 
-# 本地数据库
+# Local database
 focus_data.db
 
-# 自定义背景资源
+# Custom background assets
 custom_backgrounds/
+
+# Python cache
+__pycache__/
+*.pyc
