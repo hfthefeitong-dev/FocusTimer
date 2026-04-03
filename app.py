@@ -6,7 +6,7 @@ import json
 import threading
 import shutil
 import tempfile
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import time
 import ctypes
 from ctypes import wintypes
@@ -462,7 +462,7 @@ class Api:
         # Store in UTC as Unix epoch seconds (INTEGER). We treat this as the segment end time.
         created_at_ts = segment_end_ts if segment_end_ts is not None else int(time.time())
         # Derive date from UTC for the secondary 'date' column
-        today_utc = datetime.utcfromtimestamp(created_at_ts).date().isoformat()
+        today_utc = datetime.fromtimestamp(created_at_ts, timezone.utc).date().isoformat()
 
         if segment_start_ts is None:
             segment_start_ts = created_at_ts - max(0, duration)
@@ -648,23 +648,27 @@ class Api:
         sign = '+' if offset_total_seconds >= 0 else '-'
         return f"{sign}{abs(offset_total_seconds)} seconds", offset_hours
 
+    def _get_user_timezone(self):
+        _, offset_hours = self.get_user_offset()
+        offset_total_seconds = int(offset_hours * 3600)
+        return timezone(timedelta(seconds=offset_total_seconds)), offset_total_seconds
+
+    def _get_user_now(self):
+        user_tz, offset_total_seconds = self._get_user_timezone()
+        user_now = datetime.now(timezone.utc).astimezone(user_tz)
+        return user_now, user_tz, offset_total_seconds
+
     def _get_range_start_utc_ts(self, time_range, min_local_date=None):
         """
         Returns the UTC epoch seconds for the start boundary of the local date range.
         None means unbounded (time_range == 'all' and no min_local_date).
         """
-        _, offset_hours = self.get_user_offset()
-        offset_total_seconds = int(offset_hours * 3600)
-
-        user_now = datetime.utcnow() + timedelta(seconds=offset_total_seconds)
+        user_now, user_tz, _ = self._get_user_now()
         today_local = user_now.date()
 
-        epoch = datetime(1970, 1, 1)
-
         def local_midnight_to_utc_ts(local_date: date) -> int:
-            local_midnight = datetime(local_date.year, local_date.month, local_date.day)
-            utc_dt = local_midnight - timedelta(seconds=offset_total_seconds)
-            return int((utc_dt - epoch).total_seconds())
+            local_midnight = datetime(local_date.year, local_date.month, local_date.day, tzinfo=user_tz)
+            return int(local_midnight.astimezone(timezone.utc).timestamp())
 
         if min_local_date is not None:
             return local_midnight_to_utc_ts(min_local_date)
@@ -695,10 +699,8 @@ class Api:
         conn = _connect_db()
         cursor = conn.cursor()
 
-        offset_str, offset_hours = self.get_user_offset()
-        offset_total_seconds = int(offset_hours * 3600)
-
-        user_now = datetime.utcnow() + timedelta(seconds=offset_total_seconds)
+        offset_str, _ = self.get_user_offset()
+        user_now, _, offset_total_seconds = self._get_user_now()
         today_local = user_now.date()
 
         where_clauses = []
@@ -749,7 +751,8 @@ class Api:
         if duration_seconds <= 0:
             return
 
-        end_dt = datetime.utcfromtimestamp(created_at_ts + offset_total_seconds)
+        user_tz = timezone(timedelta(seconds=offset_total_seconds))
+        end_dt = datetime.fromtimestamp(created_at_ts, timezone.utc).astimezone(user_tz)
         start_dt = end_dt - timedelta(seconds=duration_seconds)
 
         curr = start_dt
@@ -775,12 +778,9 @@ class Api:
         return lambda d: True
 
     def _local_midnight_to_utc_ts(self, local_date: date) -> int:
-        _, offset_hours = self.get_user_offset()
-        offset_total_seconds = int(offset_hours * 3600)
-        epoch = datetime(1970, 1, 1)
-        local_midnight = datetime(local_date.year, local_date.month, local_date.day)
-        utc_dt = local_midnight - timedelta(seconds=offset_total_seconds)
-        return int((utc_dt - epoch).total_seconds())
+        user_tz, _ = self._get_user_timezone()
+        local_midnight = datetime(local_date.year, local_date.month, local_date.day, tzinfo=user_tz)
+        return int(local_midnight.astimezone(timezone.utc).timestamp())
 
     def _get_drill_local_date_bounds(self, drill):
         """
@@ -979,9 +979,8 @@ class Api:
 
                 # Fill missing days for nicer continuity.
                 # If the selected month is the current month, only fill up to today (avoid future zeros).
-                _, offset_hours = self.get_user_offset()
-                offset_total_seconds = int(offset_hours * 3600)
-                today_local = (datetime.utcnow() + timedelta(seconds=offset_total_seconds)).date()
+                user_now, _, _ = self._get_user_now()
+                today_local = user_now.date()
 
                 fill_end = drill_end_local
                 if drill_start_local <= today_local < drill_end_local:
@@ -1009,8 +1008,7 @@ class Api:
 
         # For week/month charts, fill missing days with 0 so the line chart shows continuous dates.
         if time_range in ['week', 'month']:
-            _, offset_hours = self.get_user_offset()
-            user_now = datetime.utcnow() + timedelta(hours=offset_hours)
+            user_now, _, _ = self._get_user_now()
             today_local = user_now.date()
 
             if time_range == 'week':
@@ -1075,10 +1073,8 @@ class Api:
         conn = _connect_db()
         cursor = conn.cursor()
         
-        offset_str, offset_hours = self.get_user_offset()
-        offset_total_seconds = int(offset_hours * 3600)
-        
-        user_now = datetime.utcnow() + timedelta(hours=offset_hours)
+        offset_str, _ = self.get_user_offset()
+        user_now, _, offset_total_seconds = self._get_user_now()
         today_local = user_now.date()
         
         where_clauses = []
@@ -1122,7 +1118,8 @@ class Api:
             data_map = {f"{h:02d}": 0 for h in range(24)}
 
         for ts, duration in rows:
-            end_dt = datetime.utcfromtimestamp(ts + offset_total_seconds)
+            user_tz = timezone(timedelta(seconds=offset_total_seconds))
+            end_dt = datetime.fromtimestamp(ts, timezone.utc).astimezone(user_tz)
             start_dt = end_dt - timedelta(seconds=duration)
             
             curr = start_dt
@@ -1171,8 +1168,7 @@ class Api:
         return full_data
 
     def get_calendar_stats(self, filter_cat=None, filter_sub=None):
-        _, offset_hours = self.get_user_offset()
-        user_now = datetime.utcnow() + timedelta(hours=offset_hours)
+        user_now, _, _ = self._get_user_now()
         start_date = (user_now - timedelta(days=365)).date()
 
         rows, offset_total_seconds, user_now, today_local = self._query_sessions(
@@ -1197,10 +1193,10 @@ class Api:
         conn = _connect_db()
         cursor = conn.cursor()
         
-        offset_str, offset_hours = self.get_user_offset()
+        offset_str, _ = self.get_user_offset()
         local_expr = f"datetime(created_at_ts, 'unixepoch', '{offset_str}')"
         
-        user_now = datetime.utcnow() + timedelta(hours=offset_hours)
+        user_now, _, _ = self._get_user_now()
         # Look back 365 days
         start_date = (user_now - timedelta(days=365)).date().isoformat()
         
