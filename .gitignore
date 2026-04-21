@@ -1,6 +1,7 @@
 # Local config files
 categories.json
 settings.json
+settings.json.*.tmp
 
 # Local database
 focus_data.db
