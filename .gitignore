@@ -12,3 +12,6 @@ custom_backgrounds/
 # Python cache
 __pycache__/
 *.pyc
+
+# Temporary upload files
+.tmp.driveupload/
